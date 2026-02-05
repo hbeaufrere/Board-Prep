@@ -413,7 +413,8 @@
     <div class="container">
         <header>
             <h1>ACZM MCQ Generator</h1>
-            <p>Generate board-style questions from zoo and wildlife veterinary journals</p>
+            <p>Generate board-style questions from zoological medicine journals</p>
+            <p style="font-size: 0.85rem; margin-top: 8px; opacity: 0.8;">Hugues Beaufrère, DVM, PhD, DACZM</p>
         </header>
 
         <div id="alert" class="alert"></div>
@@ -652,13 +653,23 @@
 
                 if (data.success) {
                     // Format: Questions first, then all answers at the end
+                    // Plain text version for copying
                     let questionsText = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
-                    questionsText += 'Generated from Zoo and Wildlife Veterinary Journals\n';
+                    questionsText += 'Generated from zoological medicine journals\n';
                     questionsText += '=' .repeat(50) + '\n\n';
 
                     let answersText = '\n\n' + '=' .repeat(50) + '\n';
                     answersText += 'ANSWER KEY\n';
                     answersText += '=' .repeat(50) + '\n\n';
+
+                    // HTML version for display with clickable links
+                    let questionsHtml = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
+                    questionsHtml += 'Generated from zoological medicine journals\n';
+                    questionsHtml += '=' .repeat(50) + '\n\n';
+
+                    let answersHtml = '\n\n' + '=' .repeat(50) + '\n';
+                    answersHtml += 'ANSWER KEY\n';
+                    answersHtml += '=' .repeat(50) + '\n\n';
 
                     data.mcq_results.forEach((mcq, index) => {
                         const questionNum = index + 1;
@@ -670,29 +681,41 @@
                             const questionPart = fullText.substring(0, answerStart).trim();
                             const answerPart = fullText.substring(answerStart).trim();
 
+                            // Questions - no source, just the question
                             questionsText += `QUESTION ${questionNum}\n`;
-                            questionsText += `Source: ${mcq.article_title}\n`;
-                            questionsText += `PubMed: ${mcq.article_url}\n\n`;
                             questionsText += questionPart.replace(/^QUESTION \d+:?\s*/i, '') + '\n\n';
                             questionsText += '-'.repeat(40) + '\n\n';
 
+                            questionsHtml += `QUESTION ${questionNum}\n`;
+                            questionsHtml += questionPart.replace(/^QUESTION \d+:?\s*/i, '') + '\n\n';
+                            questionsHtml += '-'.repeat(40) + '\n\n';
+
+                            // Answers - with reference and clickable link
                             answersText += `QUESTION ${questionNum}:\n`;
                             answersText += `Reference: ${mcq.article_title}\n`;
                             answersText += `PubMed: ${mcq.article_url}\n\n`;
                             answersText += answerPart + '\n\n';
+
+                            answersHtml += `QUESTION ${questionNum}:\n`;
+                            answersHtml += `Reference: ${mcq.article_title}\n`;
+                            answersHtml += `PubMed: <a href="${mcq.article_url}" target="_blank" style="color: #2c5282;">${mcq.article_url}</a>\n\n`;
+                            answersHtml += answerPart + '\n\n';
                         } else {
                             questionsText += `QUESTION ${questionNum}\n`;
-                            questionsText += `Source: ${mcq.article_title}\n`;
-                            questionsText += `PubMed: ${mcq.article_url}\n\n`;
                             questionsText += fullText + '\n\n';
                             questionsText += '-'.repeat(40) + '\n\n';
+
+                            questionsHtml += `QUESTION ${questionNum}\n`;
+                            questionsHtml += fullText + '\n\n';
+                            questionsHtml += '-'.repeat(40) + '\n\n';
                         }
                     });
 
                     formattedText = questionsText + answersText;
+                    const displayHtml = questionsHtml + answersHtml;
 
                     questionsSection.style.display = 'block';
-                    previewContent.textContent = formattedText;
+                    previewContent.innerHTML = displayHtml.replace(/\n/g, '<br>');
                     copyBtn.disabled = false;
                     hint.textContent = `${data.mcq_results.length} questions generated - answers at the bottom`;
                     showAlert(`Generated ${data.mcq_results.length} questions successfully`, 'success');
