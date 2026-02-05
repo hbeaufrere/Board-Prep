@@ -178,7 +178,7 @@ def generate_mcq_from_article(article, num_questions=1):
     api_key = os.getenv('ANTHROPIC_API_KEY')
 
     if not api_key:
-        return generate_fallback_mcq(article, num_questions)
+        return generate_fallback_mcq(article, num_questions, "ANTHROPIC_API_KEY environment variable is not set")
 
     try:
         import anthropic
@@ -230,11 +230,12 @@ Make questions appropriate for board-level veterinary specialists focusing on zo
 
     except Exception as e:
         print(f"Error generating MCQ with API: {e}")
-        return generate_fallback_mcq(article, num_questions)
+        return generate_fallback_mcq(article, num_questions, str(e))
 
 
-def generate_fallback_mcq(article, num_questions=1):
+def generate_fallback_mcq(article, num_questions=1, error_msg=None):
     """Generate a basic template MCQ when API is unavailable"""
+    error_note = f"Error: {error_msg}" if error_msg else "Note: API key not configured. Please add your ANTHROPIC_API_KEY to generate AI-powered questions."
     return {
         "article_title": article['title'],
         "article_pmid": article['pmid'],
@@ -252,7 +253,7 @@ CORRECT ANSWER: [To be determined after reviewing full article]
 EXPLANATION: Please review the full article at {article['url']} to determine the correct answer and explanation.
 
 ---
-Note: API key not configured. Please add your ANTHROPIC_API_KEY to generate AI-powered questions."""
+{error_note}"""
     }
 
 
