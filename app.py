@@ -286,13 +286,17 @@ def send_email(recipient_email, subject, html_content):
         html_part = MIMEText(html_content, 'html')
         msg.attach(html_part)
 
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
             server.starttls()
             server.login(smtp_username, smtp_password)
             server.sendmail(email_from, recipient_email, msg.as_string())
 
         return True, "Email sent successfully"
 
+    except smtplib.SMTPAuthenticationError as e:
+        return False, f"Email authentication failed. Check your SMTP_USERNAME and SMTP_PASSWORD. Error: {str(e)}"
+    except smtplib.SMTPException as e:
+        return False, f"SMTP error: {str(e)}"
     except Exception as e:
         return False, f"Error sending email: {str(e)}"
 
