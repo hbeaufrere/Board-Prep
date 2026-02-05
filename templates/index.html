@@ -208,6 +208,10 @@
             border-left-color: #ed8936;
         }
 
+        .article-item.jhms {
+            border-left-color: #9f7aea;
+        }
+
         .article-title {
             font-weight: 600;
             color: #2d3748;
@@ -391,6 +395,7 @@
         .chart-bar.jzwm { background: #2c5282; }
         .chart-bar.jams { background: #48bb78; }
         .chart-bar.jwd { background: #ed8936; }
+        .chart-bar.jhms { background: #9f7aea; }
 
         .sidebar {
             display: flex;
@@ -431,6 +436,7 @@
                             <option value="JZWM">JZWM</option>
                             <option value="JAMS">JAMS</option>
                             <option value="JWD">JWD</option>
+                            <option value="JHMS">JHMS</option>
                         </select>
                     </div>
                     <div class="stat-item">
@@ -446,7 +452,7 @@
                 </div>
                 <div class="loading" id="articles-loading">
                     <div class="spinner"></div>
-                    <p>Fetching articles from PubMed...</p>
+                    <p>Fetching articles...</p>
                 </div>
                 <div class="articles-list" id="articles-list">
                     <div class="empty-state">
@@ -524,7 +530,8 @@
         const journalNames = {
             'JZWM': 'J Zoo Wildl Med',
             'JAMS': 'J Avian Med Surg',
-            'JWD': 'J Wildl Dis'
+            'JWD': 'J Wildl Dis',
+            'JHMS': 'J Herpetol Med Surg'
         };
 
         function getJournalAbbrev(journalName) {
@@ -533,6 +540,7 @@
             if (lower.includes('zoo') && lower.includes('wildl')) return 'J Zoo Wildl Med';
             if (lower.includes('avian')) return 'J Avian Med Surg';
             if (lower.includes('wildl') && lower.includes('dis')) return 'J Wildl Dis';
+            if (lower.includes('herpetol')) return 'J Herpetol Med Surg';
             return journalName;
         }
 
@@ -576,6 +584,7 @@
                             const journalLower = (article.journal || '').toLowerCase();
                             if (journalLower.includes('avian')) journalClass = 'jams';
                             else if (journalLower.includes('wildl dis') || journalLower.includes('wildlife dis')) journalClass = 'jwd';
+                            else if (journalLower.includes('herpetol')) journalClass = 'jhms';
 
                             return `
                             <div class="article-item ${journalClass}">
@@ -663,6 +672,7 @@
                     // Plain text version for copying
                     let questionsText = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
                     questionsText += 'Generated from zoological medicine journals\n';
+                    questionsText += 'DISCLAIMER: Questions were generated from abstracts only.\n';
                     questionsText += '=' .repeat(50) + '\n\n';
 
                     let answersText = '\n\n' + '=' .repeat(50) + '\n';
@@ -672,6 +682,7 @@
                     // HTML version for display with clickable links
                     let questionsHtml = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
                     questionsHtml += 'Generated from zoological medicine journals\n';
+                    questionsHtml += 'DISCLAIMER: Questions were generated from abstracts only.\n';
                     questionsHtml += '=' .repeat(50) + '\n\n';
 
                     let answersHtml = '\n\n' + '=' .repeat(50) + '\n';

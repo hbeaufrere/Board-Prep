@@ -18,25 +18,35 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')
 
 PUBMED_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
-# Journal configurations with PubMed search terms
+# Journal configurations with search sources
 JOURNALS = {
     "JZWM": {
         "name": "Journal of Zoo and Wildlife Medicine",
         "abbrev": "JZWM",
         "query": '"J Zoo Wildl Med"[Journal]',
-        "exclude": None
+        "exclude": None,
+        "source": "pubmed"
     },
     "JAMS": {
         "name": "Journal of Avian Medicine and Surgery",
         "abbrev": "JAMS",
         "query": '"J Avian Med Surg"[Journal]',
-        "exclude": None
+        "exclude": None,
+        "source": "pubmed"
     },
     "JWD": {
         "name": "Journal of Wildlife Diseases",
         "abbrev": "JWD",
         "query": '"J Wildl Dis"[Journal]',
-        "exclude": "Letter"  # Exclude letters
+        "exclude": "Letter",
+        "source": "pubmed"
+    },
+    "JHMS": {
+        "name": "Journal of Herpetological Medicine and Surgery",
+        "abbrev": "JHMS",
+        "query": '"Journal of Herpetological Medicine and Surgery"',
+        "exclude": None,
+        "source": "scholar"
     }
 }
 
@@ -48,8 +58,81 @@ def get_date_range(months=12):
     return start_date.strftime("%Y/%m/%d"), end_date.strftime("%Y/%m/%d")
 
 
+def search_google_scholar(months=12, journal="JHMS", max_results=200):
+    """Search Google Scholar for articles from JHMS"""
+    try:
+        from scholarly import scholarly
+    except ImportError:
+        print("scholarly library not available")
+        return []
+
+    j_info = JOURNALS.get(journal, JOURNALS["JHMS"])
+    query = j_info['query']
+
+    # Calculate year range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=months * 30)
+    start_year = start_date.year
+
+    articles = []
+    try:
+        search_query = scholarly.search_pubs(query)
+        count = 0
+        for result in search_query:
+            if count >= max_results:
+                break
+
+            # Get publication year
+            pub_year = result.get('bib', {}).get('pub_year', '')
+            if pub_year:
+                try:
+                    if int(pub_year) < start_year:
+                        continue
+                except ValueError:
+                    pass
+
+            bib = result.get('bib', {})
+            title = bib.get('title', 'No title')
+            abstract = bib.get('abstract', 'No abstract available')
+            authors_list = bib.get('author', [])
+            if isinstance(authors_list, str):
+                authors = authors_list
+            else:
+                authors = ", ".join(authors_list[:5]) + ("..." if len(authors_list) > 5 else "")
+
+            articles.append({
+                "pmid": f"scholar_{count}",
+                "title": title,
+                "abstract": abstract if abstract else "No abstract available",
+                "authors": authors,
+                "pub_date": pub_year,
+                "journal": j_info['name'],
+                "url": result.get('pub_url', '') or result.get('eprint_url', '') or f"https://scholar.google.com/scholar?q={title.replace(' ', '+')}"
+            })
+            count += 1
+
+    except Exception as e:
+        print(f"Error searching Google Scholar: {e}")
+
+    return articles
+
+
+def get_scholar_article_count(months=12, journal="JHMS"):
+    """Get article count from Google Scholar (estimated)"""
+    # Google Scholar doesn't provide exact counts easily, so we fetch and count
+    articles = search_google_scholar(months, journal, max_results=500)
+    return len(articles)
+
+
 def get_article_count(months=12, journal="JZWM"):
-    """Get total article count from PubMed (no limit) for a specific journal"""
+    """Get total article count for a specific journal"""
+    j_info = JOURNALS.get(journal, JOURNALS["JZWM"])
+
+    # Route to Google Scholar for JHMS
+    if j_info.get('source') == 'scholar':
+        return get_scholar_article_count(months, journal)
+
+    # PubMed for other journals
     start_date, end_date = get_date_range(months)
 
     j_info = JOURNALS.get(journal, JOURNALS["JZWM"])
@@ -77,15 +160,42 @@ def get_article_count(months=12, journal="JZWM"):
         return 0
 
 
-def search_pubmed_articles(months=12, journal="all"):
+def search_articles(months=12, journal="all"):
+    """Search for articles from specified journal(s) - routes to PubMed or Google Scholar"""
+    # Handle single journal that uses Google Scholar
+    if journal != "all":
+        j_info = JOURNALS.get(journal, JOURNALS["JZWM"])
+        if j_info.get('source') == 'scholar':
+            return search_google_scholar(months, journal)
+
+    # Handle "all" - combine PubMed and Google Scholar results
+    if journal == "all":
+        all_articles = []
+        # Get PubMed articles
+        pubmed_articles = search_pubmed_only(months, "all_pubmed")
+        all_articles.extend(pubmed_articles)
+        # Get Google Scholar articles (JHMS)
+        for j_key, j_info in JOURNALS.items():
+            if j_info.get('source') == 'scholar':
+                scholar_articles = search_google_scholar(months, j_key)
+                all_articles.extend(scholar_articles)
+        return all_articles
+
+    # Default to PubMed search
+    return search_pubmed_only(months, journal)
+
+
+def search_pubmed_only(months=12, journal="all_pubmed"):
     """Search PubMed for articles from specified journal(s)"""
     start_date, end_date = get_date_range(months)
 
     # Build search query based on journal selection
-    if journal == "all":
-        # Search all journals
+    if journal == "all" or journal == "all_pubmed":
+        # Search all PubMed journals (exclude Google Scholar journals)
         journal_queries = []
         for j_key, j_info in JOURNALS.items():
+            if j_info.get('source') == 'scholar':
+                continue  # Skip Google Scholar journals
             jq = j_info['query']
             if j_info['exclude']:
                 jq = f"({jq} NOT {j_info['exclude']}[Publication Type])"
@@ -438,7 +548,7 @@ def get_articles():
     """API endpoint to fetch articles"""
     months = int(request.args.get('months', 12))
     journal = request.args.get('journal', 'all')
-    articles = search_pubmed_articles(months, journal)
+    articles = search_articles(months, journal)
     return jsonify({
         "success": True,
         "count": len(articles),
@@ -478,7 +588,7 @@ def generate_mcq():
     journal = data.get('journal', 'all')
 
     # Fetch articles using the selected time period and journal
-    articles = search_pubmed_articles(months, journal)
+    articles = search_articles(months, journal)
 
     if not articles:
         return jsonify({
