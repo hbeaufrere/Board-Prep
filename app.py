@@ -117,18 +117,27 @@ def parse_article_xml(article_element):
         if article is None:
             return None
 
-        # Title
+        # Title - use itertext() to capture text within nested tags (italics, etc.)
         title_elem = article.find(".//ArticleTitle")
-        title = title_elem.text if title_elem is not None else "No title"
+        if title_elem is not None:
+            title = "".join(title_elem.itertext())
+        else:
+            title = "No title"
 
-        # Abstract
-        abstract_elem = article.find(".//Abstract/AbstractText")
-        if abstract_elem is not None:
-            abstract = abstract_elem.text or ""
-            # Handle structured abstracts
-            if not abstract:
-                abstract_parts = article.findall(".//Abstract/AbstractText")
-                abstract = " ".join([part.text or "" for part in abstract_parts if part.text])
+        # Abstract - use itertext() to capture text within nested tags (italics, etc.)
+        abstract_parts = article.findall(".//Abstract/AbstractText")
+        if abstract_parts:
+            abstract_texts = []
+            for part in abstract_parts:
+                part_text = "".join(part.itertext())
+                if part_text:
+                    # Add label if present (for structured abstracts)
+                    label = part.get("Label", "")
+                    if label:
+                        abstract_texts.append(f"{label}: {part_text}")
+                    else:
+                        abstract_texts.append(part_text)
+            abstract = " ".join(abstract_texts) if abstract_texts else "No abstract available"
         else:
             abstract = "No abstract available"
 
@@ -364,14 +373,15 @@ def generate_mcq():
     """API endpoint to generate MCQs"""
     data = request.json
     num_questions = int(data.get('num_questions', 5))
+    months = int(data.get('months', 12))
 
-    # Fetch articles
-    articles = search_pubmed_articles()
+    # Fetch articles using the selected time period
+    articles = search_pubmed_articles(months)
 
     if not articles:
         return jsonify({
             "success": False,
-            "error": "No articles found in the last 3 months"
+            "error": f"No articles found in the selected time period ({months} months)"
         })
 
     # Filter articles with abstracts
