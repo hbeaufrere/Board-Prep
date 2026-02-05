@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JZWM MCQ Generator - ACZM Board Prep</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            color: white;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 25px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card h2 {
+            color: #2c5282;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .articles-section {
+            grid-column: 1 / -1;
+        }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        select, input[type="number"] {
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #2c5282;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(44, 82, 130, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+        }
+
+        .articles-list {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .article-item {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2c5282;
+            transition: background 0.3s ease;
+        }
+
+        .article-item:hover {
+            background: #edf2f7;
+        }
+
+        .article-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .article-title a {
+            color: #2c5282;
+            text-decoration: none;
+        }
+
+        .article-title a:hover {
+            text-decoration: underline;
+        }
+
+        .article-meta {
+            font-size: 0.85rem;
+            color: #718096;
+            margin-bottom: 8px;
+        }
+
+        .article-abstract {
+            font-size: 0.9rem;
+            color: #4a5568;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: #edf2f7;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .stat-item strong {
+            color: #2c5282;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #2c5282;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #feb2b2;
+        }
+
+        .preview-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .preview-section h3 {
+            color: #2c5282;
+            margin-bottom: 15px;
+        }
+
+        .mcq-preview {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>JZWM MCQ Generator</h1>
+            <p>Generate ACZM-style board questions from Journal of Zoo and Wildlife Medicine</p>
+        </header>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="main-content">
+            <!-- Articles Section -->
+            <div class="card articles-section">
+                <h2>Recent Articles (Last 3 Months)</h2>
+                <div class="stats-bar" id="stats-bar">
+                    <div class="stat-item"><strong id="article-count">-</strong> articles found</div>
+                    <div class="stat-item">Date range: <strong id="date-range">Loading...</strong></div>
+                </div>
+                <div class="loading" id="articles-loading">
+                    <div class="spinner"></div>
+                    <p>Fetching articles from PubMed...</p>
+                </div>
+                <div class="articles-list" id="articles-list">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        <p>Loading articles...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="card control-panel">
+                <h2>Generate MCQ Questions</h2>
+
+                <div class="form-group">
+                    <label for="recipient">Send To:</label>
+                    <select id="recipient">
+                        {% for recipient in recipients %}
+                        <option value="{{ recipient.email }}">{{ recipient.name }} ({{ recipient.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="num-questions">Number of Questions:</label>
+                    <input type="number" id="num-questions" min="1" max="20" value="5">
+                    <small style="color: #718096;">Each question will be from a different article</small>
+                </div>
+
+                <button class="btn btn-secondary" id="preview-btn" onclick="previewMCQ()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    Preview Questions
+                </button>
+
+                <button class="btn btn-primary" id="send-btn" onclick="sendMCQ()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    Generate & Send Email
+                </button>
+
+                <div class="preview-section" id="preview-section" style="display: none;">
+                    <h3>Question Preview</h3>
+                    <div class="mcq-preview" id="mcq-preview"></div>
+                </div>
+            </div>
+
+            <!-- MCQ Results Section -->
+            <div class="card" id="results-section" style="display: none;">
+                <h2>Generated Questions</h2>
+                <div id="mcq-results"></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Powered by PubMed E-utilities and Claude AI</p>
+        </footer>
+    </div>
+
+    <script>
+        let articlesData = [];
+
+        // Load articles on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadArticles();
+        });
+
+        async function loadArticles() {
+            const loadingEl = document.getElementById('articles-loading');
+            const listEl = document.getElementById('articles-list');
+
+            loadingEl.classList.add('active');
+
+            try {
+                const response = await fetch('/api/articles');
+                const data = await response.json();
+
+                loadingEl.classList.remove('active');
+
+                if (data.success) {
+                    articlesData = data.articles;
+                    document.getElementById('article-count').textContent = data.count;
+                    document.getElementById('date-range').textContent =
+                        `${data.date_range[0]} to ${data.date_range[1]}`;
+
+                    if (data.articles.length === 0) {
+                        listEl.innerHTML = `
+                            <div class="empty-state">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M16 16s-1.5-2-4-2-4 2-4 2"/>
+                                    <line x1="9" y1="9" x2="9.01" y2="9"/>
+                                    <line x1="15" y1="9" x2="15.01" y2="9"/>
+                                </svg>
+                                <p>No articles found in the last 3 months</p>
+                            </div>
+                        `;
+                    } else {
+                        listEl.innerHTML = data.articles.map(article => `
+                            <div class="article-item">
+                                <div class="article-title">
+                                    <a href="${article.url}" target="_blank">${article.title}</a>
+                                </div>
+                                <div class="article-meta">
+                                    ${article.authors} | ${article.pub_date} | PMID: ${article.pmid}
+                                </div>
+                                <div class="article-abstract">${article.abstract}</div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    showAlert('Error loading articles', 'error');
+                }
+            } catch (error) {
+                loadingEl.classList.remove('active');
+                showAlert('Failed to fetch articles: ' + error.message, 'error');
+            }
+        }
+
+        async function previewMCQ() {
+            const numQuestions = document.getElementById('num-questions').value;
+            const previewBtn = document.getElementById('preview-btn');
+            const previewSection = document.getElementById('preview-section');
+            const previewContent = document.getElementById('mcq-preview');
+
+            previewBtn.disabled = true;
+            previewBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating...';
+
+            try {
+                const response = await fetch('/api/generate-mcq', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ num_questions: numQuestions })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    previewSection.style.display = 'block';
+                    previewContent.innerHTML = data.mcq_results.map(mcq =>
+                        `<strong>Source: ${mcq.article_title}</strong>\n<a href="${mcq.article_url}" target="_blank">PMID: ${mcq.article_pmid}</a>\n\n${mcq.questions}\n\n${'='.repeat(50)}\n\n`
+                    ).join('');
+                } else {
+                    showAlert(data.error || 'Failed to generate questions', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            } finally {
+                previewBtn.disabled = false;
+                previewBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    Preview Questions
+                `;
+            }
+        }
+
+        async function sendMCQ() {
+            const recipient = document.getElementById('recipient').value;
+            const numQuestions = document.getElementById('num-questions').value;
+            const sendBtn = document.getElementById('send-btn');
+
+            if (!recipient) {
+                showAlert('Please select a recipient', 'error');
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating & Sending...';
+
+            try {
+                const response = await fetch('/api/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recipient_email: recipient,
+                        num_questions: numQuestions
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(`Successfully sent ${data.mcq_count} questions to ${recipient}`, 'success');
+                } else {
+                    showAlert(data.message || data.error || 'Failed to send email', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    Generate & Send Email
+                `;
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertEl = document.getElementById('alert');
+            alertEl.className = `alert alert-${type} show`;
+            alertEl.textContent = message;
+
+            setTimeout(() => {
+                alertEl.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
