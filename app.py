@@ -48,6 +48,35 @@ def get_date_range(months=12):
     return start_date.strftime("%Y/%m/%d"), end_date.strftime("%Y/%m/%d")
 
 
+def get_article_count(months=12, journal="JZWM"):
+    """Get total article count from PubMed (no limit) for a specific journal"""
+    start_date, end_date = get_date_range(months)
+
+    j_info = JOURNALS.get(journal, JOURNALS["JZWM"])
+    journal_query = j_info['query']
+    if j_info['exclude']:
+        journal_query = f"({journal_query} NOT {j_info['exclude']}[Publication Type])"
+
+    query = f'{journal_query} AND ("{start_date}"[Date - Publication] : "{end_date}"[Date - Publication])'
+
+    search_url = f"{PUBMED_BASE_URL}/esearch.fcgi"
+    search_params = {
+        "db": "pubmed",
+        "term": query,
+        "retmax": 0,  # Don't need IDs, just the count
+        "retmode": "json"
+    }
+
+    try:
+        response = requests.get(search_url, params=search_params, timeout=30)
+        response.raise_for_status()
+        search_results = response.json()
+        return int(search_results.get("esearchresult", {}).get("count", 0))
+    except requests.RequestException as e:
+        print(f"Error getting article count: {e}")
+        return 0
+
+
 def search_pubmed_articles(months=12, journal="all"):
     """Search PubMed for articles from specified journal(s)"""
     start_date, end_date = get_date_range(months)
@@ -415,16 +444,16 @@ def get_articles():
 
 @app.route('/api/journal-stats')
 def get_journal_stats():
-    """API endpoint to get article counts by journal for chart"""
+    """API endpoint to get article counts by journal for chart (no limit)"""
     months = int(request.args.get('months', 12))
 
     stats = {}
     for j_key, j_info in JOURNALS.items():
-        articles = search_pubmed_articles(months, j_key)
+        count = get_article_count(months, j_key)
         stats[j_key] = {
             "name": j_info['name'],
             "abbrev": j_info['abbrev'],
-            "count": len(articles)
+            "count": count
         }
 
     return jsonify({
