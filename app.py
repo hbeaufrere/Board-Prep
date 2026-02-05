@@ -231,7 +231,7 @@ Abstract: {article['abstract']}
 
 For each question:
 1. Create a clinically relevant question that tests understanding of the key findings or concepts
-2. Provide 4 answer options (A, B, C, D)
+2. Provide 5 answer options (A, B, C, D, E) with 1 correct answer and 4 distractors
 3. Indicate the correct answer
 4. Provide a brief explanation
 
@@ -243,6 +243,7 @@ A) [Option A]
 B) [Option B]
 C) [Option C]
 D) [Option D]
+E) [Option E]
 
 CORRECT ANSWER: [Letter]
 
@@ -286,6 +287,7 @@ A) [Review the abstract to determine the correct answer]
 B) [Alternative interpretation]
 C) [Common misconception]
 D) [Unrelated finding]
+E) [Another distractor]
 
 CORRECT ANSWER: [To be determined after reviewing full article]
 
