@@ -451,12 +451,6 @@ def send_mcq_email():
             "error": "No questions to send. Please generate questions first."
         })
 
-    # Check email config
-    smtp_username = os.getenv('SMTP_USERNAME')
-    smtp_password = os.getenv('SMTP_PASSWORD')
-    print(f"[EMAIL] SMTP_USERNAME configured: {bool(smtp_username)}")
-    print(f"[EMAIL] SMTP_PASSWORD configured: {bool(smtp_password)}")
-
     # Format email
     html_content = format_mcq_email(mcq_results)
     subject = f"ACZM Board Prep - {len(mcq_results)} MCQ Questions from JZWM"
