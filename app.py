@@ -398,10 +398,10 @@ def generate_mcq():
 
 @app.route('/api/send-email', methods=['POST'])
 def send_mcq_email():
-    """API endpoint to generate MCQs and send email"""
+    """API endpoint to send pre-generated MCQs via email"""
     data = request.json
     recipient_email = data.get('recipient_email')
-    num_questions = int(data.get('num_questions', 5))
+    mcq_results = data.get('mcq_results')
 
     if not recipient_email:
         return jsonify({
@@ -409,34 +409,15 @@ def send_mcq_email():
             "error": "No recipient email provided"
         })
 
-    # Fetch articles
-    articles = search_pubmed_articles()
-
-    if not articles:
+    if not mcq_results or len(mcq_results) == 0:
         return jsonify({
             "success": False,
-            "error": "No articles found in the last 3 months"
+            "error": "No questions to send. Please generate questions first."
         })
-
-    # Filter articles with abstracts
-    articles_with_abstracts = [a for a in articles if a['abstract'] != "No abstract available"]
-
-    if not articles_with_abstracts:
-        articles_with_abstracts = articles
-
-    # Randomly select articles
-    num_articles = min(num_questions, len(articles_with_abstracts))
-    selected_articles = random.sample(articles_with_abstracts, num_articles)
-
-    # Generate MCQs
-    mcq_results = []
-    for article in selected_articles:
-        mcq = generate_mcq_from_article(article, 1)
-        mcq_results.append(mcq)
 
     # Format email
     html_content = format_mcq_email(mcq_results)
-    subject = f"ACZM Board Prep - {num_questions} MCQ Questions from JZWM"
+    subject = f"ACZM Board Prep - {len(mcq_results)} MCQ Questions from JZWM"
 
     # Send email
     success, message = send_email(recipient_email, subject, html_content)

@@ -385,6 +385,19 @@
                 <h2>Generate MCQ Questions</h2>
 
                 <div class="form-group">
+                    <label for="num-questions">Number of Questions:</label>
+                    <input type="number" id="num-questions" min="1" max="20" value="5">
+                    <small style="color: #718096;">Each question will be from a different article</small>
+                </div>
+
+                <button class="btn btn-secondary" id="generate-btn" onclick="generateMCQ()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4m0 12v4m-7-10H1m22 0h-4m-2.636-5.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m0-10.728l2.828 2.828m5.072 5.072l2.828 2.828"/>
+                    </svg>
+                    Generate Questions
+                </button>
+
+                <div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
                     <label for="recipient">Send To:</label>
                     <select id="recipient">
                         {% for recipient in recipients %}
@@ -393,38 +406,20 @@
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label for="num-questions">Number of Questions:</label>
-                    <input type="number" id="num-questions" min="1" max="20" value="5">
-                    <small style="color: #718096;">Each question will be from a different article</small>
-                </div>
-
-                <button class="btn btn-secondary" id="preview-btn" onclick="previewMCQ()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                    Preview Questions
-                </button>
-
-                <button class="btn btn-primary" id="send-btn" onclick="sendMCQ()">
+                <button class="btn btn-primary" id="send-btn" onclick="sendMCQ()" disabled>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="22" y1="2" x2="11" y2="13"/>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                     </svg>
-                    Generate & Send Email
+                    Send Email
                 </button>
-
-                <div class="preview-section" id="preview-section" style="display: none;">
-                    <h3>Question Preview</h3>
-                    <div class="mcq-preview" id="mcq-preview"></div>
-                </div>
+                <small id="send-hint" style="color: #718096; display: block; margin-top: 5px;">Generate questions first before sending</small>
             </div>
 
-            <!-- MCQ Results Section -->
-            <div class="card" id="results-section" style="display: none;">
+            <!-- Generated Questions Section (full width) -->
+            <div class="card articles-section" id="questions-section" style="display: none;">
                 <h2>Generated Questions</h2>
-                <div id="mcq-results"></div>
+                <div class="mcq-preview" id="mcq-preview" style="max-height: none;"></div>
             </div>
         </div>
 
@@ -435,6 +430,7 @@
 
     <script>
         let articlesData = [];
+        let generatedMCQs = null;
 
         // Load articles on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -494,14 +490,16 @@
             }
         }
 
-        async function previewMCQ() {
+        async function generateMCQ() {
             const numQuestions = document.getElementById('num-questions').value;
-            const previewBtn = document.getElementById('preview-btn');
-            const previewSection = document.getElementById('preview-section');
+            const generateBtn = document.getElementById('generate-btn');
+            const questionsSection = document.getElementById('questions-section');
             const previewContent = document.getElementById('mcq-preview');
+            const sendBtn = document.getElementById('send-btn');
+            const sendHint = document.getElementById('send-hint');
 
-            previewBtn.disabled = true;
-            previewBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating...';
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating...';
 
             try {
                 const response = await fetch('/api/generate-mcq', {
@@ -513,30 +511,32 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    previewSection.style.display = 'block';
+                    generatedMCQs = data.mcq_results;
+                    questionsSection.style.display = 'block';
                     previewContent.innerHTML = data.mcq_results.map(mcq =>
-                        `<strong>Source: ${mcq.article_title}</strong>\n<a href="${mcq.article_url}" target="_blank">PMID: ${mcq.article_pmid}</a>\n\n${mcq.questions}\n\n${'='.repeat(50)}\n\n`
+                        `<strong>Source: ${mcq.article_title}</strong>\n<a href="${mcq.article_url}" target="_blank">PMID: ${mcq.article_pmid}</a>\n\n${mcq.questions}\n\n${'='.repeat(60)}\n\n`
                     ).join('');
+                    sendBtn.disabled = false;
+                    sendHint.textContent = `${data.mcq_results.length} questions ready to send`;
+                    showAlert(`Generated ${data.mcq_results.length} questions successfully`, 'success');
                 } else {
                     showAlert(data.error || 'Failed to generate questions', 'error');
                 }
             } catch (error) {
                 showAlert('Error: ' + error.message, 'error');
             } finally {
-                previewBtn.disabled = false;
-                previewBtn.innerHTML = `
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = `
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 2v4m0 12v4m-7-10H1m22 0h-4m-2.636-5.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m0-10.728l2.828 2.828m5.072 5.072l2.828 2.828"/>
                     </svg>
-                    Preview Questions
+                    Generate Questions
                 `;
             }
         }
 
         async function sendMCQ() {
             const recipient = document.getElementById('recipient').value;
-            const numQuestions = document.getElementById('num-questions').value;
             const sendBtn = document.getElementById('send-btn');
 
             if (!recipient) {
@@ -544,8 +544,13 @@
                 return;
             }
 
+            if (!generatedMCQs || generatedMCQs.length === 0) {
+                showAlert('Please generate questions first', 'error');
+                return;
+            }
+
             sendBtn.disabled = true;
-            sendBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating & Sending...';
+            sendBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Sending...';
 
             try {
                 const response = await fetch('/api/send-email', {
@@ -553,7 +558,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         recipient_email: recipient,
-                        num_questions: numQuestions
+                        mcq_results: generatedMCQs
                     })
                 });
 
@@ -573,7 +578,7 @@
                         <line x1="22" y1="2" x2="11" y2="13"/>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                     </svg>
-                    Generate & Send Email
+                    Send Email
                 `;
             }
         }
