@@ -170,6 +170,11 @@
             background: #38a169;
         }
 
+        .btn-secondary:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
         .articles-list {
             max-height: 500px;
             overflow-y: auto;
@@ -287,27 +292,14 @@
             border: 1px solid #feb2b2;
         }
 
-        .preview-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #e2e8f0;
-        }
-
-        .preview-section h3 {
-            color: #2c5282;
-            margin-bottom: 15px;
-        }
-
         .mcq-preview {
             background: #f7fafc;
             padding: 20px;
             border-radius: 8px;
-            max-height: 400px;
-            overflow-y: auto;
             white-space: pre-wrap;
-            font-family: monospace;
-            font-size: 0.9rem;
-            line-height: 1.6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.7;
         }
 
         .empty-state {
@@ -328,6 +320,21 @@
             padding: 30px;
             color: rgba(255,255,255,0.7);
             font-size: 0.9rem;
+        }
+
+        .questions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .questions-header h2 {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
         }
     </style>
 </head>
@@ -392,36 +399,37 @@
                     <small style="color: #718096;">Each question will be from a different article</small>
                 </div>
 
-                <button class="btn btn-secondary" id="generate-btn" onclick="generateMCQ()">
+                <button class="btn btn-primary" id="generate-btn" onclick="generateMCQ()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2v4m0 12v4m-7-10H1m22 0h-4m-2.636-5.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m0-10.728l2.828 2.828m5.072 5.072l2.828 2.828"/>
                     </svg>
                     Generate Questions
                 </button>
 
-                <div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
-                    <label for="recipient">Send To:</label>
-                    <select id="recipient">
-                        {% for recipient in recipients %}
-                        <option value="{{ recipient.email }}">{{ recipient.name }} ({{ recipient.email }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <button class="btn btn-primary" id="send-btn" onclick="sendMCQ()" disabled>
+                <button class="btn btn-secondary" id="copy-btn" onclick="copyMCQ()" disabled>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="22" y1="2" x2="11" y2="13"/>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                     </svg>
-                    Send Email
+                    Copy to Clipboard
                 </button>
-                <small id="send-hint" style="color: #718096; display: block; margin-top: 5px;">Generate questions first before sending</small>
+
+                <small id="hint" style="color: #718096; display: block; margin-top: 5px;">Generate questions first</small>
             </div>
 
             <!-- Generated Questions Section (full width) -->
             <div class="card articles-section" id="questions-section" style="display: none;">
-                <h2>Generated Questions</h2>
-                <div class="mcq-preview" id="mcq-preview" style="max-height: none;"></div>
+                <div class="questions-header">
+                    <h2>Generated Questions</h2>
+                    <button class="btn btn-secondary" onclick="copyMCQ()" style="padding: 10px 20px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        Copy
+                    </button>
+                </div>
+                <div class="mcq-preview" id="mcq-preview"></div>
             </div>
         </div>
 
@@ -432,9 +440,8 @@
 
     <script>
         let articlesData = [];
-        let generatedMCQs = null;
+        let formattedText = '';
 
-        // Load articles on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadArticles();
         });
@@ -498,8 +505,8 @@
             const generateBtn = document.getElementById('generate-btn');
             const questionsSection = document.getElementById('questions-section');
             const previewContent = document.getElementById('mcq-preview');
-            const sendBtn = document.getElementById('send-btn');
-            const sendHint = document.getElementById('send-hint');
+            const copyBtn = document.getElementById('copy-btn');
+            const hint = document.getElementById('hint');
 
             generateBtn.disabled = true;
             generateBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating...';
@@ -514,13 +521,54 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    generatedMCQs = data.mcq_results;
+                    // Format: Questions first, then all answers at the end
+                    let questionsText = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
+                    questionsText += 'From Journal of Zoo and Wildlife Medicine\n';
+                    questionsText += '=' .repeat(50) + '\n\n';
+
+                    let answersText = '\n\n' + '=' .repeat(50) + '\n';
+                    answersText += 'ANSWER KEY\n';
+                    answersText += '=' .repeat(50) + '\n\n';
+
+                    data.mcq_results.forEach((mcq, index) => {
+                        // Parse the question text to separate question from answer
+                        const questionNum = index + 1;
+                        const fullText = mcq.questions;
+
+                        // Find where the answer section starts
+                        const correctAnswerMatch = fullText.match(/CORRECT ANSWER:/i);
+
+                        if (correctAnswerMatch) {
+                            const answerStart = fullText.indexOf(correctAnswerMatch[0]);
+                            const questionPart = fullText.substring(0, answerStart).trim();
+                            const answerPart = fullText.substring(answerStart).trim();
+
+                            // Add question
+                            questionsText += `QUESTION ${questionNum}\n`;
+                            questionsText += `Source: ${mcq.article_title}\n`;
+                            questionsText += `PubMed: ${mcq.article_url}\n\n`;
+                            questionsText += questionPart.replace(/^QUESTION \d+:?\s*/i, '') + '\n\n';
+                            questionsText += '-'.repeat(40) + '\n\n';
+
+                            // Add answer
+                            answersText += `QUESTION ${questionNum}:\n`;
+                            answersText += answerPart + '\n\n';
+                        } else {
+                            // Fallback if format doesn't match
+                            questionsText += `QUESTION ${questionNum}\n`;
+                            questionsText += `Source: ${mcq.article_title}\n`;
+                            questionsText += `PubMed: ${mcq.article_url}\n\n`;
+                            questionsText += fullText + '\n\n';
+                            questionsText += '-'.repeat(40) + '\n\n';
+                        }
+                    });
+
+                    formattedText = questionsText + answersText;
+
                     questionsSection.style.display = 'block';
-                    previewContent.innerHTML = data.mcq_results.map(mcq =>
-                        `<strong>Source: ${mcq.article_title}</strong>\n<a href="${mcq.article_url}" target="_blank">PMID: ${mcq.article_pmid}</a>\n\n${mcq.questions}\n\n${'='.repeat(60)}\n\n`
-                    ).join('');
-                    sendBtn.disabled = false;
-                    sendHint.textContent = `${data.mcq_results.length} questions ready to send`;
+                    previewContent.textContent = formattedText;
+                    copyBtn.disabled = false;
+                    hint.textContent = `${data.mcq_results.length} questions generated - answers at the bottom`;
                     showAlert(`Generated ${data.mcq_results.length} questions successfully`, 'success');
                 } else {
                     showAlert(data.error || 'Failed to generate questions', 'error');
@@ -538,52 +586,17 @@
             }
         }
 
-        async function sendMCQ() {
-            const recipient = document.getElementById('recipient').value;
-            const sendBtn = document.getElementById('send-btn');
-
-            if (!recipient) {
-                showAlert('Please select a recipient', 'error');
+        function copyMCQ() {
+            if (!formattedText) {
+                showAlert('No questions to copy', 'error');
                 return;
             }
 
-            if (!generatedMCQs || generatedMCQs.length === 0) {
-                showAlert('Please generate questions first', 'error');
-                return;
-            }
-
-            sendBtn.disabled = true;
-            sendBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Sending...';
-
-            try {
-                const response = await fetch('/api/send-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        recipient_email: recipient,
-                        mcq_results: generatedMCQs
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert(`Successfully sent ${data.mcq_count} questions to ${recipient}`, 'success');
-                } else {
-                    showAlert(data.message || data.error || 'Failed to send email', 'error');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            } finally {
-                sendBtn.disabled = false;
-                sendBtn.innerHTML = `
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="22" y1="2" x2="11" y2="13"/>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                    </svg>
-                    Send Email
-                `;
-            }
+            navigator.clipboard.writeText(formattedText).then(() => {
+                showAlert('Questions copied to clipboard!', 'success');
+            }).catch(err => {
+                showAlert('Failed to copy: ' + err.message, 'error');
+            });
         }
 
         function showAlert(message, type) {
