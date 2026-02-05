@@ -1,13 +1,10 @@
 """
-PubMed Article Extractor and MCQ Generator
-Extracts articles from Journal of Zoo and Wildlife Medicine and generates ACZM-style MCQs
+ACZM MCQ Generator
+Extracts articles from veterinary journals and generates ACZM-style MCQs
 """
 
 import os
 import random
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request
@@ -19,13 +16,29 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')
 
-# Configuration
-EMAIL_RECIPIENTS = [
-    {"email": "hbeaufrere@ucdavis.edu", "name": "H. Beaufrere"}
-]
-
 PUBMED_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-JOURNAL_NAME = "J Zoo Wildl Med"  # PubMed abbreviation
+
+# Journal configurations with PubMed search terms
+JOURNALS = {
+    "JZWM": {
+        "name": "Journal of Zoo and Wildlife Medicine",
+        "abbrev": "JZWM",
+        "query": '"J Zoo Wildl Med"[Journal]',
+        "exclude": None
+    },
+    "JAMS": {
+        "name": "Journal of Avian Medicine and Surgery",
+        "abbrev": "JAMS",
+        "query": '"J Avian Med Surg"[Journal]',
+        "exclude": None
+    },
+    "JWD": {
+        "name": "Journal of Wildlife Diseases",
+        "abbrev": "JWD",
+        "query": '"J Wildl Dis"[Journal]',
+        "exclude": "Letter"  # Exclude letters
+    }
+}
 
 
 def get_date_range(months=12):
@@ -35,19 +48,35 @@ def get_date_range(months=12):
     return start_date.strftime("%Y/%m/%d"), end_date.strftime("%Y/%m/%d")
 
 
-def search_pubmed_articles(months=12):
-    """Search PubMed for articles from Journal of Zoo and Wildlife Medicine"""
+def search_pubmed_articles(months=12, journal="all"):
+    """Search PubMed for articles from specified journal(s)"""
     start_date, end_date = get_date_range(months)
 
-    # Build search query
-    query = f'"{JOURNAL_NAME}"[Journal] AND ("{start_date}"[Date - Publication] : "{end_date}"[Date - Publication])'
+    # Build search query based on journal selection
+    if journal == "all":
+        # Search all journals
+        journal_queries = []
+        for j_key, j_info in JOURNALS.items():
+            jq = j_info['query']
+            if j_info['exclude']:
+                jq = f"({jq} NOT {j_info['exclude']}[Publication Type])"
+            journal_queries.append(jq)
+        journal_query = "(" + " OR ".join(journal_queries) + ")"
+    else:
+        # Search specific journal
+        j_info = JOURNALS.get(journal, JOURNALS["JZWM"])
+        journal_query = j_info['query']
+        if j_info['exclude']:
+            journal_query = f"({journal_query} NOT {j_info['exclude']}[Publication Type])"
+
+    query = f'{journal_query} AND ("{start_date}"[Date - Publication] : "{end_date}"[Date - Publication])'
 
     # First, search for article IDs
     search_url = f"{PUBMED_BASE_URL}/esearch.fcgi"
     search_params = {
         "db": "pubmed",
         "term": query,
-        "retmax": 100,
+        "retmax": 200,
         "retmode": "json",
         "sort": "pub_date"
     }
@@ -364,19 +393,42 @@ def format_mcq_email(mcq_results):
 @app.route('/')
 def index():
     """Main page"""
-    return render_template('index.html', recipients=EMAIL_RECIPIENTS)
+    return render_template('index.html', journals=JOURNALS)
 
 
 @app.route('/api/articles')
 def get_articles():
     """API endpoint to fetch articles"""
     months = int(request.args.get('months', 12))
-    articles = search_pubmed_articles(months)
+    journal = request.args.get('journal', 'all')
+    articles = search_pubmed_articles(months, journal)
     return jsonify({
         "success": True,
         "count": len(articles),
         "articles": articles,
-        "date_range": get_date_range(months)
+        "date_range": get_date_range(months),
+        "journal": journal
+    })
+
+
+@app.route('/api/journal-stats')
+def get_journal_stats():
+    """API endpoint to get article counts by journal for chart"""
+    months = int(request.args.get('months', 12))
+
+    stats = {}
+    for j_key, j_info in JOURNALS.items():
+        articles = search_pubmed_articles(months, j_key)
+        stats[j_key] = {
+            "name": j_info['name'],
+            "abbrev": j_info['abbrev'],
+            "count": len(articles)
+        }
+
+    return jsonify({
+        "success": True,
+        "stats": stats,
+        "months": months
     })
 
 
@@ -386,9 +438,10 @@ def generate_mcq():
     data = request.json
     num_questions = int(data.get('num_questions', 5))
     months = int(data.get('months', 12))
+    journal = data.get('journal', 'all')
 
-    # Fetch articles using the selected time period
-    articles = search_pubmed_articles(months)
+    # Fetch articles using the selected time period and journal
+    articles = search_pubmed_articles(months, journal)
 
     if not articles:
         return jsonify({
