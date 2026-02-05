@@ -28,9 +28,9 @@ JOURNAL_NAME = "J Zoo Wildl Med"  # PubMed abbreviation
 
 
 def get_date_range():
-    """Get date range for the last 3 months"""
+    """Get date range for the last 12 months"""
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=90)
+    start_date = end_date - timedelta(days=365)
     return start_date.strftime("%Y/%m/%d"), end_date.strftime("%Y/%m/%d")
 
 
