@@ -16,6 +16,29 @@
             background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
             min-height: 100vh;
             color: #333;
+            position: relative;
+        }
+
+        .bg-lion {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-macaw {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .container {
@@ -309,6 +332,16 @@
     </style>
 </head>
 <body>
+    <!-- Lion silhouette -->
+    <svg class="bg-lion" viewBox="0 0 100 100" fill="white">
+        <path d="M50 15c-8 0-15 3-20 8-3-5-8-8-14-8-2 0-4 1-4 3 0 4 3 8 8 10-2 3-3 7-3 11 0 5 2 10 5 14l-8 12c-1 2 0 4 2 5 2 0 4-1 5-2l6-9c4 3 9 5 14 6v15c0 2 2 4 4 4h10c2 0 4-2 4-4V64c5-1 10-3 14-6l6 9c1 1 3 2 5 2 2-1 3-3 2-5l-8-12c3-4 5-9 5-14 0-4-1-8-3-11 5-2 8-6 8-10 0-2-2-3-4-3-6 0-11 3-14 8-5-5-12-8-20-8zm-15 25c-3 0-5 2-5 5s2 5 5 5 5-2 5-5-2-5-5-5zm30 0c-3 0-5 2-5 5s2 5 5 5 5-2 5-5-2-5-5-5zm-15 15c-4 0-8 2-10 5 2 3 6 5 10 5s8-2 10-5c-2-3-6-5-10-5z"/>
+    </svg>
+
+    <!-- Macaw silhouette -->
+    <svg class="bg-macaw" viewBox="0 0 100 100" fill="white">
+        <path d="M75 10c-5 0-10 3-13 7-2-2-5-3-8-3-8 0-15 7-15 15v5c-10 2-18 10-18 20 0 8 5 15 12 18v8c0 5 4 10 10 10h10c5 0 10-5 10-10v-5h5c8 0 15-7 15-15 0-5-2-9-6-12 4-3 6-8 6-13 0-8-5-15-12-18 2-4 4-7 4-7zm-25 35c-3 0-5 2-5 5s2 5 5 5 5-2 5-5-2-5-5-5zm-8 20l-7 15h10l5-10 5 10h10l-7-15c-2 1-5 2-8 2s-6-1-8-2z"/>
+    </svg>
+
     <div class="container">
         <header>
             <h1>JZWM MCQ Generator</h1>
