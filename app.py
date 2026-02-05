@@ -24,7 +24,7 @@ EMAIL_RECIPIENTS = [
 ]
 
 PUBMED_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-JOURNAL_NAME = "Journal of Zoo and Wildlife Medicine"
+JOURNAL_NAME = "J Zoo Wildl Med"  # PubMed abbreviation
 
 
 def get_date_range():
