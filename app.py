@@ -9,6 +9,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request
 import requests
 from dotenv import load_dotenv
@@ -274,8 +275,13 @@ def send_email(recipient_email, subject, html_content):
     smtp_password = os.getenv('SMTP_PASSWORD')
     email_from = os.getenv('EMAIL_FROM', smtp_username)
 
+    print(f"[SMTP] Server: {smtp_server}:{smtp_port}")
+    print(f"[SMTP] From: {email_from}")
+    print(f"[SMTP] To: {recipient_email}")
+
     if not smtp_username or not smtp_password:
-        return False, "Email not configured. Please set SMTP_USERNAME and SMTP_PASSWORD in .env file."
+        print("[SMTP] ERROR: Missing credentials")
+        return False, "Email not configured. Please set SMTP_USERNAME and SMTP_PASSWORD in environment variables."
 
     try:
         msg = MIMEMultipart('alternative')
@@ -286,18 +292,26 @@ def send_email(recipient_email, subject, html_content):
         html_part = MIMEText(html_content, 'html')
         msg.attach(html_part)
 
+        print("[SMTP] Connecting to server...")
         with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
+            print("[SMTP] Starting TLS...")
             server.starttls()
+            print("[SMTP] Logging in...")
             server.login(smtp_username, smtp_password)
+            print("[SMTP] Sending email...")
             server.sendmail(email_from, recipient_email, msg.as_string())
+            print("[SMTP] Email sent successfully!")
 
         return True, "Email sent successfully"
 
     except smtplib.SMTPAuthenticationError as e:
+        print(f"[SMTP] Authentication error: {e}")
         return False, f"Email authentication failed. Check your SMTP_USERNAME and SMTP_PASSWORD. Error: {str(e)}"
     except smtplib.SMTPException as e:
+        print(f"[SMTP] SMTP error: {e}")
         return False, f"SMTP error: {str(e)}"
     except Exception as e:
+        print(f"[SMTP] General error: {e}")
         return False, f"Error sending email: {str(e)}"
 
 
@@ -398,11 +412,22 @@ def generate_mcq():
     num_articles = min(num_questions, len(articles_with_abstracts))
     selected_articles = random.sample(articles_with_abstracts, num_articles)
 
-    # Generate MCQs
+    # Generate MCQs in parallel for faster processing
     mcq_results = []
-    for article in selected_articles:
-        mcq = generate_mcq_from_article(article, 1)
-        mcq_results.append(mcq)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(generate_mcq_from_article, article, 1): article for article in selected_articles}
+        for future in as_completed(futures):
+            try:
+                mcq = future.result(timeout=60)
+                mcq_results.append(mcq)
+            except Exception as e:
+                article = futures[future]
+                mcq_results.append({
+                    "article_title": article['title'],
+                    "article_pmid": article['pmid'],
+                    "article_url": article['url'],
+                    "questions": f"Error generating question: {str(e)}"
+                })
 
     return jsonify({
         "success": True,
@@ -417,6 +442,9 @@ def send_mcq_email():
     recipient_email = data.get('recipient_email')
     mcq_results = data.get('mcq_results')
 
+    print(f"[EMAIL] Attempting to send email to: {recipient_email}")
+    print(f"[EMAIL] Number of questions: {len(mcq_results) if mcq_results else 0}")
+
     if not recipient_email:
         return jsonify({
             "success": False,
@@ -428,6 +456,12 @@ def send_mcq_email():
             "success": False,
             "error": "No questions to send. Please generate questions first."
         })
+
+    # Check email config
+    smtp_username = os.getenv('SMTP_USERNAME')
+    smtp_password = os.getenv('SMTP_PASSWORD')
+    print(f"[EMAIL] SMTP_USERNAME configured: {bool(smtp_username)}")
+    print(f"[EMAIL] SMTP_PASSWORD configured: {bool(smtp_password)}")
 
     # Format email
     html_content = format_mcq_email(mcq_results)
