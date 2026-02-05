@@ -27,16 +27,16 @@ PUBMED_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 JOURNAL_NAME = "J Zoo Wildl Med"  # PubMed abbreviation
 
 
-def get_date_range():
-    """Get date range for the last 12 months"""
+def get_date_range(months=12):
+    """Get date range for the specified number of months"""
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=365)
+    start_date = end_date - timedelta(days=months * 30)
     return start_date.strftime("%Y/%m/%d"), end_date.strftime("%Y/%m/%d")
 
 
-def search_pubmed_articles():
-    """Search PubMed for articles from Journal of Zoo and Wildlife Medicine in the last 3 months"""
-    start_date, end_date = get_date_range()
+def search_pubmed_articles(months=12):
+    """Search PubMed for articles from Journal of Zoo and Wildlife Medicine"""
+    start_date, end_date = get_date_range(months)
 
     # Build search query
     query = f'"{JOURNAL_NAME}"[Journal] AND ("{start_date}"[Date - Publication] : "{end_date}"[Date - Publication])'
@@ -348,12 +348,13 @@ def index():
 @app.route('/api/articles')
 def get_articles():
     """API endpoint to fetch articles"""
-    articles = search_pubmed_articles()
+    months = int(request.args.get('months', 12))
+    articles = search_pubmed_articles(months)
     return jsonify({
         "success": True,
         "count": len(articles),
         "articles": articles,
-        "date_range": get_date_range()
+        "date_range": get_date_range(months)
     })
 
 

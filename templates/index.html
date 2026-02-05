@@ -320,8 +320,16 @@
         <div class="main-content">
             <!-- Articles Section -->
             <div class="card articles-section">
-                <h2>Recent Articles (Last 3 Months)</h2>
+                <h2>Recent Articles</h2>
                 <div class="stats-bar" id="stats-bar">
+                    <div class="stat-item">
+                        <label for="date-range-select" style="margin-right: 8px;">Time period:</label>
+                        <select id="date-range-select" onchange="loadArticles()" style="padding: 5px 10px; border-radius: 4px; border: 1px solid #cbd5e0;">
+                            <option value="6">Past 6 months</option>
+                            <option value="12" selected>Past 12 months</option>
+                            <option value="24">Past 24 months</option>
+                        </select>
+                    </div>
                     <div class="stat-item"><strong id="article-count">-</strong> articles found</div>
                     <div class="stat-item">Date range: <strong id="date-range">Loading...</strong></div>
                 </div>
@@ -403,11 +411,12 @@
         async function loadArticles() {
             const loadingEl = document.getElementById('articles-loading');
             const listEl = document.getElementById('articles-list');
+            const months = document.getElementById('date-range-select').value;
 
             loadingEl.classList.add('active');
 
             try {
-                const response = await fetch('/api/articles');
+                const response = await fetch(`/api/articles?months=${months}`);
                 const data = await response.json();
 
                 loadingEl.classList.remove('active');
@@ -427,7 +436,7 @@
                                     <line x1="9" y1="9" x2="9.01" y2="9"/>
                                     <line x1="15" y1="9" x2="15.01" y2="9"/>
                                 </svg>
-                                <p>No articles found in the last 3 months</p>
+                                <p>No articles found in the selected time period</p>
                             </div>
                         `;
                     } else {
