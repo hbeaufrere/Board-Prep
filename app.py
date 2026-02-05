@@ -268,50 +268,44 @@ EXPLANATION: Please review the full article at {article['url']} to determine the
 
 
 def send_email(recipient_email, subject, html_content):
-    """Send email with MCQ questions"""
-    smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-    smtp_port = int(os.getenv('SMTP_PORT', 587))
-    smtp_username = os.getenv('SMTP_USERNAME')
-    smtp_password = os.getenv('SMTP_PASSWORD')
-    email_from = os.getenv('EMAIL_FROM', smtp_username)
+    """Send email using Resend API"""
+    resend_api_key = os.getenv('RESEND_API_KEY')
+    email_from = os.getenv('EMAIL_FROM', 'ACZM Board Prep <onboarding@resend.dev>')
 
-    print(f"[SMTP] Server: {smtp_server}:{smtp_port}")
-    print(f"[SMTP] From: {email_from}")
-    print(f"[SMTP] To: {recipient_email}")
+    print(f"[RESEND] To: {recipient_email}")
+    print(f"[RESEND] From: {email_from}")
+    print(f"[RESEND] API Key configured: {bool(resend_api_key)}")
 
-    if not smtp_username or not smtp_password:
-        print("[SMTP] ERROR: Missing credentials")
-        return False, "Email not configured. Please set SMTP_USERNAME and SMTP_PASSWORD in environment variables."
+    if not resend_api_key:
+        return False, "Email not configured. Please set RESEND_API_KEY environment variable."
 
     try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = email_from
-        msg['To'] = recipient_email
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {resend_api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "from": email_from,
+                "to": [recipient_email],
+                "subject": subject,
+                "html": html_content
+            },
+            timeout=30
+        )
 
-        html_part = MIMEText(html_content, 'html')
-        msg.attach(html_part)
+        print(f"[RESEND] Response status: {response.status_code}")
+        print(f"[RESEND] Response: {response.text}")
 
-        print("[SMTP] Connecting to server...")
-        with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
-            print("[SMTP] Starting TLS...")
-            server.starttls()
-            print("[SMTP] Logging in...")
-            server.login(smtp_username, smtp_password)
-            print("[SMTP] Sending email...")
-            server.sendmail(email_from, recipient_email, msg.as_string())
-            print("[SMTP] Email sent successfully!")
+        if response.status_code == 200:
+            return True, "Email sent successfully"
+        else:
+            error_msg = response.json().get('message', response.text)
+            return False, f"Resend error: {error_msg}"
 
-        return True, "Email sent successfully"
-
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"[SMTP] Authentication error: {e}")
-        return False, f"Email authentication failed. Check your SMTP_USERNAME and SMTP_PASSWORD. Error: {str(e)}"
-    except smtplib.SMTPException as e:
-        print(f"[SMTP] SMTP error: {e}")
-        return False, f"SMTP error: {str(e)}"
     except Exception as e:
-        print(f"[SMTP] General error: {e}")
+        print(f"[RESEND] Error: {e}")
         return False, f"Error sending email: {str(e)}"
 
 
