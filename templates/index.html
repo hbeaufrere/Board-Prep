@@ -677,6 +677,8 @@
                             questionsText += '-'.repeat(40) + '\n\n';
 
                             answersText += `QUESTION ${questionNum}:\n`;
+                            answersText += `Reference: ${mcq.article_title}\n`;
+                            answersText += `PubMed: ${mcq.article_url}\n\n`;
                             answersText += answerPart + '\n\n';
                         } else {
                             questionsText += `QUESTION ${questionNum}\n`;
