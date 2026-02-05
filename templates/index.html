@@ -443,7 +443,6 @@
                             <option value="60">Past 5 years</option>
                         </select>
                     </div>
-                    <div class="stat-item"><strong id="article-count">-</strong> articles</div>
                 </div>
                 <div class="loading" id="articles-loading">
                     <div class="spinner"></div>
@@ -549,7 +548,6 @@
 
                 if (data.success) {
                     articlesData = data.articles;
-                    document.getElementById('article-count').textContent = data.count;
 
                     if (data.articles.length === 0) {
                         listEl.innerHTML = `
