@@ -294,6 +294,9 @@ Make questions appropriate for board-level veterinary specialists focusing on zo
             "article_title": article['title'],
             "article_pmid": article['pmid'],
             "article_url": article['url'],
+            "article_authors": article['authors'],
+            "article_journal": article['journal'],
+            "article_year": article['pub_date'],
             "questions": message.content[0].text
         }
 
@@ -309,6 +312,9 @@ def generate_fallback_mcq(article, num_questions=1, error_msg=None):
         "article_title": article['title'],
         "article_pmid": article['pmid'],
         "article_url": article['url'],
+        "article_authors": article['authors'],
+        "article_journal": article['journal'],
+        "article_year": article['pub_date'],
         "questions": f"""QUESTION 1:
 Based on the study "{article['title']}", which of the following statements is most accurate regarding the findings?
 
@@ -504,6 +510,9 @@ def generate_mcq():
                     "article_title": article['title'],
                     "article_pmid": article['pmid'],
                     "article_url": article['url'],
+                    "article_authors": article['authors'],
+                    "article_journal": article['journal'],
+                    "article_year": article['pub_date'],
                     "questions": f"Error generating question: {str(e)}"
                 })
 

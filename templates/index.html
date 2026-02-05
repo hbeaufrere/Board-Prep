@@ -527,6 +527,15 @@
             'JWD': 'J Wildl Dis'
         };
 
+        function getJournalAbbrev(journalName) {
+            if (!journalName) return '';
+            const lower = journalName.toLowerCase();
+            if (lower.includes('zoo') && lower.includes('wildl')) return 'J Zoo Wildl Med';
+            if (lower.includes('avian')) return 'J Avian Med Surg';
+            if (lower.includes('wildl') && lower.includes('dis')) return 'J Wildl Dis';
+            return journalName;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             loadArticles();
             loadChart();
@@ -689,13 +698,20 @@
                             questionsHtml += '-'.repeat(40) + '\n\n';
 
                             // Answers - with reference and clickable link
+                            // Format: FirstAuthor et al. Title. JournalAbbrev. Year.
+                            const firstAuthor = mcq.article_authors ? mcq.article_authors.split(',')[0].trim() : 'Unknown';
+                            const authorCitation = mcq.article_authors && mcq.article_authors.includes(',') ? `${firstAuthor} et al.` : firstAuthor;
+                            const journalAbbrev = getJournalAbbrev(mcq.article_journal);
+                            const year = mcq.article_year ? mcq.article_year.match(/\d{4}/)?.[0] || mcq.article_year : '';
+                            const reference = `${authorCitation} ${mcq.article_title}. ${journalAbbrev}. ${year}.`;
+
                             answersText += `QUESTION ${questionNum}:\n`;
-                            answersText += `Reference: ${mcq.article_title}\n`;
+                            answersText += `Reference: ${reference}\n`;
                             answersText += `PubMed: ${mcq.article_url}\n\n`;
                             answersText += answerPart + '\n\n';
 
                             answersHtml += `QUESTION ${questionNum}:\n`;
-                            answersHtml += `Reference: ${mcq.article_title}\n`;
+                            answersHtml += `Reference: ${reference}\n`;
                             answersHtml += `PubMed: <a href="${mcq.article_url}" target="_blank" style="color: #2c5282;">${mcq.article_url}</a>\n\n`;
                             answersHtml += answerPart + '\n\n';
                         } else {
