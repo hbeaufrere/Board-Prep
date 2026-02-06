@@ -500,7 +500,7 @@
 
                 <!-- Chart Panel -->
                 <div class="card">
-                    <h3>Articles by Journal</h3>
+                    <h3>Articles by Journal <span id="total-articles" style="font-weight: normal; color: #718096;"></span></h3>
                     <div class="chart-container" id="chart-container">
                         <p style="color: #718096; font-size: 0.9rem;">Loading chart...</p>
                     </div>
@@ -626,6 +626,10 @@
                 if (data.success) {
                     const stats = data.stats;
                     const maxCount = Math.max(...Object.values(stats).map(s => s.count), 1);
+                    const totalCount = Object.values(stats).reduce((sum, s) => sum + s.count, 0);
+
+                    // Update total count display
+                    document.getElementById('total-articles').textContent = `(${totalCount} total)`;
 
                     let chartHtml = '';
                     for (const [key, info] of Object.entries(stats)) {
