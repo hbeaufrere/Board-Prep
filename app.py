@@ -753,6 +753,132 @@ def get_recipients():
     })
 
 
+@app.route('/api/monthly-update', methods=['POST'])
+def monthly_update():
+    """API endpoint to generate monthly literature update summary"""
+    # Fetch articles from the past month (1 month)
+    months = 1
+
+    # Get articles by journal
+    journal_articles = {}
+    all_articles = []
+
+    for j_key, j_info in JOURNALS.items():
+        if j_info.get('source') == 'crossref':
+            articles = search_crossref(months, j_key, max_results=100)
+        else:
+            articles = search_pubmed_only(months, j_key)
+        journal_articles[j_key] = articles
+        all_articles.extend(articles)
+
+    # Count articles by journal
+    journal_counts = {j_key: len(articles) for j_key, articles in journal_articles.items()}
+
+    if not all_articles:
+        return jsonify({
+            "success": True,
+            "journal_counts": journal_counts,
+            "topics_summary": "No articles found in the past month.",
+            "key_points": ""
+        })
+
+    # Filter to articles with abstracts for summary
+    articles_with_abstracts = [a for a in all_articles if a['abstract'] != "No abstract available"]
+
+    if not articles_with_abstracts:
+        articles_with_abstracts = all_articles[:20]  # Use first 20 if none have abstracts
+    else:
+        # Limit to 30 articles to avoid token limits
+        articles_with_abstracts = articles_with_abstracts[:30]
+
+    # Prepare article summaries for Claude
+    article_summaries = []
+    for a in articles_with_abstracts:
+        # Get journal abbreviation
+        journal_abbrev = a['journal']
+        for j_key, j_info in JOURNALS.items():
+            if j_info['name'] == a['journal']:
+                journal_abbrev = j_info['abbrev']
+                break
+
+        article_summaries.append(f"**{a['title']}** ({journal_abbrev}, {a['pub_date']})\nAbstract: {a['abstract'][:500]}...")
+
+    articles_text = "\n\n---\n\n".join(article_summaries)
+
+    # Generate summary using Claude
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+
+    if not api_key:
+        return jsonify({
+            "success": True,
+            "journal_counts": journal_counts,
+            "topics_summary": "API key not configured. Cannot generate summary.",
+            "key_points": ""
+        })
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        prompt = f"""You are reviewing the latest zoological medicine literature from the past month. Below are recent articles from veterinary journals (JZWM = Journal of Zoo and Wildlife Medicine, JAMS = Journal of Avian Medicine and Surgery, JWD = Journal of Wildlife Diseases, JHMS = Journal of Herpetological Medicine and Surgery).
+
+ARTICLES:
+{articles_text}
+
+Please provide:
+
+1. **TOPICS SUMMARY**: Organize the literature by major topics/themes (e.g., Infectious Diseases, Anesthesia, Surgery, Nutrition, Reproduction, Conservation Medicine, etc.). For each topic, briefly summarize the key findings from relevant articles. List which journals contributed to each topic.
+
+2. **10 KEY POINTS FOR ACZM EXAMINATION**: Extract the 10 most important clinical or scientific takeaways that would be relevant for the American College of Zoological Medicine board examination. These should be specific, factual points that candidates should remember. Number them 1-10.
+
+Format your response exactly as:
+
+TOPICS SUMMARY:
+[Your organized summary by topics]
+
+---
+
+10 KEY POINTS FOR ACZM EXAMINATION:
+1. [Point 1]
+2. [Point 2]
+...
+10. [Point 10]"""
+
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=3000,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        response_text = message.content[0].text
+
+        # Split response into topics summary and key points
+        if "---" in response_text:
+            parts = response_text.split("---", 1)
+            topics_summary = parts[0].strip()
+            key_points = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            topics_summary = response_text
+            key_points = ""
+
+        return jsonify({
+            "success": True,
+            "journal_counts": journal_counts,
+            "topics_summary": topics_summary,
+            "key_points": key_points
+        })
+
+    except Exception as e:
+        print(f"Error generating monthly update: {e}")
+        return jsonify({
+            "success": False,
+            "error": f"Error generating summary: {str(e)}",
+            "journal_counts": journal_counts
+        })
+
+
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     app.run(debug=debug_mode, host='0.0.0.0', port=5000)

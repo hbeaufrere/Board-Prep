@@ -496,6 +496,16 @@
                         Copy to Clipboard
                     </button>
 
+                    <button class="btn btn-primary" id="monthly-btn" onclick="generateMonthlyUpdate()" style="background: #48bb78;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Monthly Literature Update
+                    </button>
+
                     <small id="hint" style="color: #718096;">Generate questions first</small>
                 </div>
 
@@ -847,6 +857,91 @@
             }).catch(err => {
                 showAlert('Failed to copy: ' + err.message, 'error');
             });
+        }
+
+        async function generateMonthlyUpdate() {
+            const monthlyBtn = document.getElementById('monthly-btn');
+            const questionsSection = document.getElementById('questions-section');
+            const previewContent = document.getElementById('mcq-preview');
+            const copyBtn = document.getElementById('copy-btn');
+            const hint = document.getElementById('hint');
+
+            monthlyBtn.disabled = true;
+            monthlyBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating...';
+
+            try {
+                const response = await fetch('/api/monthly-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Format the monthly update
+                    let updateText = 'MONTHLY LITERATURE UPDATE\n';
+                    updateText += 'Zoological Medicine Journals - Past Month\n';
+                    updateText += '=' .repeat(50) + '\n\n';
+
+                    let updateHtml = '<strong>MONTHLY LITERATURE UPDATE</strong>\n';
+                    updateHtml += 'Zoological Medicine Journals - Past Month\n';
+                    updateHtml += '=' .repeat(50) + '\n\n';
+
+                    // Summary by journal
+                    updateText += 'ARTICLES BY JOURNAL:\n';
+                    updateHtml += '<strong>ARTICLES BY JOURNAL:</strong>\n';
+                    for (const [journal, count] of Object.entries(data.journal_counts)) {
+                        updateText += `  ${journal}: ${count} articles\n`;
+                        updateHtml += `  ${journal}: ${count} articles\n`;
+                    }
+                    updateText += '\n';
+                    updateHtml += '\n';
+
+                    // Topics summary
+                    updateText += '=' .repeat(50) + '\n';
+                    updateText += 'LITERATURE SUMMARY BY TOPICS:\n';
+                    updateText += '=' .repeat(50) + '\n\n';
+                    updateText += data.topics_summary + '\n\n';
+
+                    updateHtml += '=' .repeat(50) + '\n';
+                    updateHtml += '<strong>LITERATURE SUMMARY BY TOPICS:</strong>\n';
+                    updateHtml += '=' .repeat(50) + '\n\n';
+                    updateHtml += data.topics_summary + '\n\n';
+
+                    // Key points
+                    updateText += '=' .repeat(50) + '\n';
+                    updateText += '10 KEY POINTS FOR ACZM EXAMINATION:\n';
+                    updateText += '=' .repeat(50) + '\n\n';
+                    updateText += data.key_points + '\n';
+
+                    updateHtml += '=' .repeat(50) + '\n';
+                    updateHtml += '<strong>10 KEY POINTS FOR ACZM EXAMINATION:</strong>\n';
+                    updateHtml += '=' .repeat(50) + '\n\n';
+                    updateHtml += data.key_points + '\n';
+
+                    formattedText = updateText;
+                    questionsSection.style.display = 'block';
+                    previewContent.innerHTML = updateHtml.replace(/\n/g, '<br>');
+                    copyBtn.disabled = false;
+                    hint.textContent = 'Monthly update generated - use Copy to save';
+                    showAlert('Monthly literature update generated!', 'success');
+                } else {
+                    showAlert(data.error || 'Failed to generate monthly update', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            } finally {
+                monthlyBtn.disabled = false;
+                monthlyBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    Monthly Literature Update
+                `;
+            }
         }
 
         function showAlert(message, type) {
