@@ -47,6 +47,13 @@ JOURNALS = {
         "issn": "1529-9651",
         "exclude": None,
         "source": "crossref"
+    },
+    "JEPM": {
+        "name": "Journal of Exotic Pet Medicine",
+        "abbrev": "JEPM",
+        "issn": "1557-5063",
+        "exclude": None,
+        "source": "crossref"
     }
 }
 

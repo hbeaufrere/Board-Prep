@@ -212,6 +212,10 @@
             border-left-color: #9f7aea;
         }
 
+        .article-item.jepm {
+            border-left-color: #f56565;
+        }
+
         .article-title {
             font-weight: 600;
             color: #2d3748;
@@ -396,6 +400,7 @@
         .chart-bar.jams { background: #48bb78; }
         .chart-bar.jwd { background: #ed8936; }
         .chart-bar.jhms { background: #9f7aea; }
+        .chart-bar.jepm { background: #f56565; }
 
         .sidebar {
             display: flex;
@@ -437,6 +442,7 @@
                             <option value="JAMS">JAMS</option>
                             <option value="JWD">JWD</option>
                             <option value="JHMS">JHMS</option>
+                            <option value="JEPM">JEPM</option>
                         </select>
                     </div>
                     <div class="stat-item">
@@ -531,7 +537,8 @@
             'JZWM': 'J Zoo Wildl Med',
             'JAMS': 'J Avian Med Surg',
             'JWD': 'J Wildl Dis',
-            'JHMS': 'J Herpetol Med Surg'
+            'JHMS': 'J Herpetol Med Surg',
+            'JEPM': 'J Exot Pet Med'
         };
 
         function getJournalAbbrev(journalName) {
@@ -541,6 +548,7 @@
             if (lower.includes('avian')) return 'J Avian Med Surg';
             if (lower.includes('wildl') && lower.includes('dis')) return 'J Wildl Dis';
             if (lower.includes('herpetol')) return 'J Herpetol Med Surg';
+            if (lower.includes('exotic') && lower.includes('pet')) return 'J Exot Pet Med';
             return journalName;
         }
 
@@ -585,6 +593,7 @@
                             if (journalLower.includes('avian')) journalClass = 'jams';
                             else if (journalLower.includes('wildl dis') || journalLower.includes('wildlife dis')) journalClass = 'jwd';
                             else if (journalLower.includes('herpetol')) journalClass = 'jhms';
+                            else if (journalLower.includes('exotic') && journalLower.includes('pet')) journalClass = 'jepm';
 
                             return `
                             <div class="article-item ${journalClass}">
