@@ -620,20 +620,16 @@
 
                 if (data.success) {
                     const stats = data.stats;
-                    // Filter out -1 counts for max calculation
-                    const validCounts = Object.values(stats).map(s => s.count).filter(c => c >= 0);
-                    const maxCount = Math.max(...validCounts, 1);
+                    const maxCount = Math.max(...Object.values(stats).map(s => s.count), 1);
 
                     let chartHtml = '';
                     for (const [key, info] of Object.entries(stats)) {
-                        const isNA = info.count < 0;
-                        const percentage = isNA ? 0 : (info.count / maxCount) * 100;
-                        const displayCount = isNA ? 'N/A (Google Scholar)' : info.count;
+                        const percentage = (info.count / maxCount) * 100;
                         chartHtml += `
                             <div class="chart-bar-container">
                                 <div class="chart-label">
                                     <span>${info.abbrev}</span>
-                                    <span>${displayCount}</span>
+                                    <span>${info.count}</span>
                                 </div>
                                 <div class="chart-bar-bg">
                                     <div class="chart-bar ${key.toLowerCase()}" style="width: ${percentage}%"></div>

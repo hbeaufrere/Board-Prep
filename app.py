@@ -44,9 +44,9 @@ JOURNALS = {
     "JHMS": {
         "name": "Journal of Herpetological Medicine and Surgery",
         "abbrev": "JHMS",
-        "query": '"Journal of Herpetological Medicine and Surgery"',
+        "issn": "1529-9651",
         "exclude": None,
-        "source": "scholar"
+        "source": "crossref"
     }
 }
 
@@ -58,103 +58,132 @@ def get_date_range(months=12):
     return start_date.strftime("%Y/%m/%d"), end_date.strftime("%Y/%m/%d")
 
 
-def search_google_scholar(months=12, journal="JHMS", max_results=50):
-    """Search Google Scholar for articles from JHMS - limited results due to API constraints"""
-    try:
-        from scholarly import scholarly
-        import signal
+def search_crossref(months=12, journal="JHMS", max_results=200):
+    """Search CrossRef API for articles from a journal by ISSN"""
+    j_info = JOURNALS.get(journal, JOURNALS["JHMS"])
+    issn = j_info.get('issn')
 
-        # Set a timeout for the search
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Google Scholar search timed out")
-
-        # Only set signal handler if on Unix (not Windows)
-        try:
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(30)  # 30 second timeout
-        except (AttributeError, ValueError):
-            pass  # Signal not available on this platform
-
-    except ImportError:
-        print("scholarly library not available")
+    if not issn:
+        print(f"No ISSN configured for {journal}")
         return []
 
-    j_info = JOURNALS.get(journal, JOURNALS["JHMS"])
-    query = j_info['query']
-
-    # Calculate year range
+    # Calculate date range
     end_date = datetime.now()
     start_date = end_date - timedelta(days=months * 30)
-    start_year = start_date.year
+    from_date = start_date.strftime("%Y-%m-%d")
 
     articles = []
     try:
-        search_query = scholarly.search_pubs(query)
-        count = 0
-        for result in search_query:
-            if count >= max_results:
-                break
+        # CrossRef API endpoint for works by ISSN
+        url = "https://api.crossref.org/journals/{}/works".format(issn)
+        params = {
+            "filter": f"from-pub-date:{from_date}",
+            "rows": max_results,
+            "sort": "published",
+            "order": "desc"
+        }
+        headers = {
+            "User-Agent": "ACZMMCQGenerator/1.0 (mailto:admin@example.com)"
+        }
 
-            # Get publication year
-            pub_year = result.get('bib', {}).get('pub_year', '')
-            if pub_year:
-                try:
-                    if int(pub_year) < start_year:
-                        continue
-                except ValueError:
-                    pass
+        response = requests.get(url, params=params, headers=headers, timeout=30)
+        response.raise_for_status()
+        data = response.json()
 
-            bib = result.get('bib', {})
-            title = bib.get('title', 'No title')
-            abstract = bib.get('abstract', 'No abstract available')
-            authors_list = bib.get('author', [])
-            if isinstance(authors_list, str):
-                authors = authors_list
-            else:
-                authors = ", ".join(authors_list[:5]) + ("..." if len(authors_list) > 5 else "")
+        items = data.get('message', {}).get('items', [])
+
+        for idx, item in enumerate(items):
+            # Get title
+            title_list = item.get('title', [])
+            title = title_list[0] if title_list else 'No title'
+
+            # Get abstract
+            abstract = item.get('abstract', 'No abstract available')
+            if abstract and abstract.startswith('<'):
+                # Strip HTML tags from abstract
+                import re
+                abstract = re.sub('<[^<]+?>', '', abstract)
+
+            # Get authors
+            authors_list = item.get('author', [])
+            authors = []
+            for author in authors_list[:5]:
+                given = author.get('given', '')
+                family = author.get('family', '')
+                if given and family:
+                    authors.append(f"{given} {family}")
+                elif family:
+                    authors.append(family)
+            authors_str = ", ".join(authors) + ("..." if len(authors_list) > 5 else "")
+
+            # Get publication date
+            pub_date_parts = item.get('published-print', {}).get('date-parts', [[]])
+            if not pub_date_parts or not pub_date_parts[0]:
+                pub_date_parts = item.get('published-online', {}).get('date-parts', [[]])
+
+            year = str(pub_date_parts[0][0]) if pub_date_parts and pub_date_parts[0] else ''
+
+            # Get DOI and URL
+            doi = item.get('DOI', '')
+            url = f"https://doi.org/{doi}" if doi else item.get('URL', '')
 
             articles.append({
-                "pmid": f"scholar_{count}",
+                "pmid": f"crossref_{idx}",
                 "title": title,
                 "abstract": abstract if abstract else "No abstract available",
-                "authors": authors,
-                "pub_date": pub_year,
+                "authors": authors_str,
+                "pub_date": year,
                 "journal": j_info['name'],
-                "url": result.get('pub_url', '') or result.get('eprint_url', '') or f"https://scholar.google.com/scholar?q={title.replace(' ', '+')}"
+                "url": url
             })
-            count += 1
 
-    except TimeoutError:
-        print("Google Scholar search timed out")
+    except requests.RequestException as e:
+        print(f"Error searching CrossRef: {e}")
     except Exception as e:
-        print(f"Error searching Google Scholar: {e}")
-    finally:
-        try:
-            signal.alarm(0)  # Cancel the alarm
-        except (AttributeError, NameError):
-            pass
+        print(f"Error parsing CrossRef response: {e}")
 
     return articles
 
 
-def get_scholar_article_count(months=12, journal="JHMS"):
-    """Get article count from Google Scholar (estimated) - returns cached/limited count"""
-    # Google Scholar is slow, so just return a placeholder or limited count
-    # The actual count will be shown when user specifically selects JHMS
+def get_crossref_article_count(months=12, journal="JHMS"):
+    """Get article count from CrossRef API"""
+    j_info = JOURNALS.get(journal, JOURNALS["JHMS"])
+    issn = j_info.get('issn')
+
+    if not issn:
+        return 0
+
     try:
-        articles = search_google_scholar(months, journal, max_results=100)
-        return len(articles)
-    except Exception:
-        return 0  # Return 0 if there's any error
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=months * 30)
+        from_date = start_date.strftime("%Y-%m-%d")
+
+        url = "https://api.crossref.org/journals/{}/works".format(issn)
+        params = {
+            "filter": f"from-pub-date:{from_date}",
+            "rows": 0  # Just get count, no results
+        }
+        headers = {
+            "User-Agent": "ACZMMCQGenerator/1.0 (mailto:admin@example.com)"
+        }
+
+        response = requests.get(url, params=params, headers=headers, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        return data.get('message', {}).get('total-results', 0)
+    except Exception as e:
+        print(f"Error getting CrossRef count: {e}")
+        return 0
 
 
 def get_article_count(months=12, journal="JZWM"):
     """Get total article count for a specific journal"""
     j_info = JOURNALS.get(journal, JOURNALS["JZWM"])
 
-    # Route to Google Scholar for JHMS
-    if j_info.get('source') == 'scholar':
-        return get_scholar_article_count(months, journal)
+    # Route to CrossRef for journals not in PubMed
+    if j_info.get('source') == 'crossref':
+        return get_crossref_article_count(months, journal)
 
     # PubMed for other journals
     start_date, end_date = get_date_range(months)
@@ -185,17 +214,25 @@ def get_article_count(months=12, journal="JZWM"):
 
 
 def search_articles(months=12, journal="all"):
-    """Search for articles from specified journal(s) - routes to PubMed or Google Scholar"""
-    # Handle single journal that uses Google Scholar
+    """Search for articles from specified journal(s) - routes to PubMed or CrossRef"""
+    # Handle single journal that uses CrossRef (not in PubMed)
     if journal != "all":
         j_info = JOURNALS.get(journal, JOURNALS["JZWM"])
-        if j_info.get('source') == 'scholar':
-            return search_google_scholar(months, journal, max_results=50)
+        if j_info.get('source') == 'crossref':
+            return search_crossref(months, journal, max_results=200)
 
-    # Handle "all" - only search PubMed journals (JHMS is too slow for "all")
-    # Users can select JHMS directly if they want those articles
+    # Handle "all" - combine PubMed and CrossRef results
     if journal == "all":
-        return search_pubmed_only(months, "all_pubmed")
+        all_articles = []
+        # Get PubMed articles
+        pubmed_articles = search_pubmed_only(months, "all_pubmed")
+        all_articles.extend(pubmed_articles)
+        # Get CrossRef articles (JHMS)
+        for j_key, j_info in JOURNALS.items():
+            if j_info.get('source') == 'crossref':
+                crossref_articles = search_crossref(months, j_key, max_results=200)
+                all_articles.extend(crossref_articles)
+        return all_articles
 
     # Default to PubMed search
     return search_pubmed_only(months, journal)
@@ -207,11 +244,11 @@ def search_pubmed_only(months=12, journal="all_pubmed"):
 
     # Build search query based on journal selection
     if journal == "all" or journal == "all_pubmed":
-        # Search all PubMed journals (exclude Google Scholar journals)
+        # Search all PubMed journals (exclude CrossRef journals)
         journal_queries = []
         for j_key, j_info in JOURNALS.items():
-            if j_info.get('source') == 'scholar':
-                continue  # Skip Google Scholar journals
+            if j_info.get('source') == 'crossref':
+                continue  # Skip CrossRef journals (not in PubMed)
             jq = j_info['query']
             if j_info['exclude']:
                 jq = f"({jq} NOT {j_info['exclude']}[Publication Type])"
@@ -581,20 +618,13 @@ def get_journal_stats():
 
     stats = {}
     for j_key, j_info in JOURNALS.items():
-        # Skip Google Scholar journals for stats (too slow)
-        if j_info.get('source') == 'scholar':
-            stats[j_key] = {
-                "name": j_info['name'],
-                "abbrev": j_info['abbrev'],
-                "count": -1  # -1 indicates "N/A" for Google Scholar journals
-            }
-        else:
-            count = get_article_count(months, j_key)
-            stats[j_key] = {
-                "name": j_info['name'],
-                "abbrev": j_info['abbrev'],
-                "count": count
-            }
+        # Get count for all journals (CrossRef is fast enough now)
+        count = get_article_count(months, j_key)
+        stats[j_key] = {
+            "name": j_info['name'],
+            "abbrev": j_info['abbrev'],
+            "count": count
+        }
 
     return jsonify({
         "success": True,
