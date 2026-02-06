@@ -58,10 +58,23 @@ def get_date_range(months=12):
     return start_date.strftime("%Y/%m/%d"), end_date.strftime("%Y/%m/%d")
 
 
-def search_google_scholar(months=12, journal="JHMS", max_results=200):
-    """Search Google Scholar for articles from JHMS"""
+def search_google_scholar(months=12, journal="JHMS", max_results=50):
+    """Search Google Scholar for articles from JHMS - limited results due to API constraints"""
     try:
         from scholarly import scholarly
+        import signal
+
+        # Set a timeout for the search
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Google Scholar search timed out")
+
+        # Only set signal handler if on Unix (not Windows)
+        try:
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(30)  # 30 second timeout
+        except (AttributeError, ValueError):
+            pass  # Signal not available on this platform
+
     except ImportError:
         print("scholarly library not available")
         return []
@@ -111,17 +124,28 @@ def search_google_scholar(months=12, journal="JHMS", max_results=200):
             })
             count += 1
 
+    except TimeoutError:
+        print("Google Scholar search timed out")
     except Exception as e:
         print(f"Error searching Google Scholar: {e}")
+    finally:
+        try:
+            signal.alarm(0)  # Cancel the alarm
+        except (AttributeError, NameError):
+            pass
 
     return articles
 
 
 def get_scholar_article_count(months=12, journal="JHMS"):
-    """Get article count from Google Scholar (estimated)"""
-    # Google Scholar doesn't provide exact counts easily, so we fetch and count
-    articles = search_google_scholar(months, journal, max_results=500)
-    return len(articles)
+    """Get article count from Google Scholar (estimated) - returns cached/limited count"""
+    # Google Scholar is slow, so just return a placeholder or limited count
+    # The actual count will be shown when user specifically selects JHMS
+    try:
+        articles = search_google_scholar(months, journal, max_results=100)
+        return len(articles)
+    except Exception:
+        return 0  # Return 0 if there's any error
 
 
 def get_article_count(months=12, journal="JZWM"):
@@ -166,20 +190,12 @@ def search_articles(months=12, journal="all"):
     if journal != "all":
         j_info = JOURNALS.get(journal, JOURNALS["JZWM"])
         if j_info.get('source') == 'scholar':
-            return search_google_scholar(months, journal)
+            return search_google_scholar(months, journal, max_results=50)
 
-    # Handle "all" - combine PubMed and Google Scholar results
+    # Handle "all" - only search PubMed journals (JHMS is too slow for "all")
+    # Users can select JHMS directly if they want those articles
     if journal == "all":
-        all_articles = []
-        # Get PubMed articles
-        pubmed_articles = search_pubmed_only(months, "all_pubmed")
-        all_articles.extend(pubmed_articles)
-        # Get Google Scholar articles (JHMS)
-        for j_key, j_info in JOURNALS.items():
-            if j_info.get('source') == 'scholar':
-                scholar_articles = search_google_scholar(months, j_key)
-                all_articles.extend(scholar_articles)
-        return all_articles
+        return search_pubmed_only(months, "all_pubmed")
 
     # Default to PubMed search
     return search_pubmed_only(months, journal)
@@ -565,12 +581,20 @@ def get_journal_stats():
 
     stats = {}
     for j_key, j_info in JOURNALS.items():
-        count = get_article_count(months, j_key)
-        stats[j_key] = {
-            "name": j_info['name'],
-            "abbrev": j_info['abbrev'],
-            "count": count
-        }
+        # Skip Google Scholar journals for stats (too slow)
+        if j_info.get('source') == 'scholar':
+            stats[j_key] = {
+                "name": j_info['name'],
+                "abbrev": j_info['abbrev'],
+                "count": -1  # -1 indicates "N/A" for Google Scholar journals
+            }
+        else:
+            count = get_article_count(months, j_key)
+            stats[j_key] = {
+                "name": j_info['name'],
+                "abbrev": j_info['abbrev'],
+                "count": count
+            }
 
     return jsonify({
         "success": True,
