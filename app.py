@@ -426,6 +426,7 @@ For each question:
 2. Provide 5 answer options (A, B, C, D, E) with 1 correct answer and 4 distractors
 3. Indicate the correct answer
 4. Provide a brief explanation
+5. Provide ONE key learning point from this article
 
 Format each question as:
 QUESTION [number]:
@@ -440,6 +441,8 @@ E) [Option E]
 CORRECT ANSWER: [Letter]
 
 EXPLANATION: [Brief explanation of why this is correct and why other options are incorrect]
+
+KEY LEARNING POINT: [One major takeaway from this article that board candidates should remember]
 
 ---
 
@@ -670,6 +673,12 @@ def generate_mcq():
     num_articles = min(num_questions, len(articles_with_abstracts))
     selected_articles = random.sample(articles_with_abstracts, num_articles)
 
+    # Get PMIDs of selected articles
+    selected_pmids = {a['pmid'] for a in selected_articles}
+
+    # Get related articles (articles not selected, up to 10)
+    related_articles = [a for a in articles_with_abstracts if a['pmid'] not in selected_pmids][:10]
+
     # Generate MCQs in parallel for faster processing
     mcq_results = []
     with ThreadPoolExecutor(max_workers=5) as executor:
@@ -692,7 +701,8 @@ def generate_mcq():
 
     return jsonify({
         "success": True,
-        "mcq_results": mcq_results
+        "mcq_results": mcq_results,
+        "related_articles": related_articles
     })
 
 

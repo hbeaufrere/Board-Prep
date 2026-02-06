@@ -699,6 +699,15 @@
                     answersHtml += 'ANSWER KEY\n';
                     answersHtml += '=' .repeat(50) + '\n\n';
 
+                    // Key learning points section
+                    let learningPointsText = '\n\n' + '=' .repeat(50) + '\n';
+                    learningPointsText += 'KEY LEARNING POINTS\n';
+                    learningPointsText += '=' .repeat(50) + '\n\n';
+
+                    let learningPointsHtml = '\n\n' + '=' .repeat(50) + '\n';
+                    learningPointsHtml += 'KEY LEARNING POINTS\n';
+                    learningPointsHtml += '=' .repeat(50) + '\n\n';
+
                     data.mcq_results.forEach((mcq, index) => {
                         const questionNum = index + 1;
                         const fullText = mcq.questions;
@@ -708,6 +717,10 @@
                             const answerStart = fullText.indexOf(correctAnswerMatch[0]);
                             const questionPart = fullText.substring(0, answerStart).trim();
                             const answerPart = fullText.substring(answerStart).trim();
+
+                            // Extract key learning point
+                            const keyLearningMatch = answerPart.match(/KEY LEARNING POINT:\s*(.+?)(?=\n---|\n\n|$)/is);
+                            const keyLearning = keyLearningMatch ? keyLearningMatch[1].trim() : '';
 
                             // Questions - no source, just the question
                             questionsText += `QUESTION ${questionNum}\n`;
@@ -729,12 +742,18 @@
                             answersText += `QUESTION ${questionNum}:\n`;
                             answersText += `Reference: ${reference}\n`;
                             answersText += `PubMed: ${mcq.article_url}\n\n`;
-                            answersText += answerPart + '\n\n';
+                            answersText += answerPart.replace(/KEY LEARNING POINT:.*$/is, '').trim() + '\n\n';
 
                             answersHtml += `QUESTION ${questionNum}:\n`;
                             answersHtml += `Reference: ${reference}\n`;
                             answersHtml += `PubMed: <a href="${mcq.article_url}" target="_blank" style="color: #2c5282;">${mcq.article_url}</a>\n\n`;
-                            answersHtml += answerPart + '\n\n';
+                            answersHtml += answerPart.replace(/KEY LEARNING POINT:.*$/is, '').trim() + '\n\n';
+
+                            // Key learning points
+                            if (keyLearning) {
+                                learningPointsText += `${questionNum}. ${keyLearning}\n\n`;
+                                learningPointsHtml += `${questionNum}. ${keyLearning}\n\n`;
+                            }
                         } else {
                             questionsText += `QUESTION ${questionNum}\n`;
                             questionsText += fullText + '\n\n';
@@ -746,8 +765,35 @@
                         }
                     });
 
-                    formattedText = questionsText + answersText;
-                    const displayHtml = questionsHtml + answersHtml;
+                    // Related articles section
+                    let relatedText = '\n\n' + '=' .repeat(50) + '\n';
+                    relatedText += 'RELATED ARTICLES TO CONSULT\n';
+                    relatedText += '=' .repeat(50) + '\n\n';
+
+                    let relatedHtml = '\n\n' + '=' .repeat(50) + '\n';
+                    relatedHtml += 'RELATED ARTICLES TO CONSULT\n';
+                    relatedHtml += '=' .repeat(50) + '\n\n';
+
+                    if (data.related_articles && data.related_articles.length > 0) {
+                        data.related_articles.forEach((article, index) => {
+                            const firstAuthor = article.authors ? article.authors.split(',')[0].trim() : 'Unknown';
+                            const authorCitation = article.authors && article.authors.includes(',') ? `${firstAuthor} et al.` : firstAuthor;
+                            const journalAbbrev = getJournalAbbrev(article.journal);
+                            const year = article.pub_date ? article.pub_date.match(/\d{4}/)?.[0] || article.pub_date : '';
+
+                            relatedText += `${index + 1}. ${authorCitation} ${article.title}. ${journalAbbrev}. ${year}.\n`;
+                            relatedText += `   ${article.url}\n\n`;
+
+                            relatedHtml += `${index + 1}. ${authorCitation} ${article.title}. ${journalAbbrev}. ${year}.\n`;
+                            relatedHtml += `   <a href="${article.url}" target="_blank" style="color: #2c5282;">${article.url}</a>\n\n`;
+                        });
+                    } else {
+                        relatedText += 'No additional related articles found.\n\n';
+                        relatedHtml += 'No additional related articles found.\n\n';
+                    }
+
+                    formattedText = questionsText + answersText + learningPointsText + relatedText;
+                    const displayHtml = questionsHtml + answersHtml + learningPointsHtml + relatedHtml;
 
                     questionsSection.style.display = 'block';
                     previewContent.innerHTML = displayHtml.replace(/\n/g, '<br>');
