@@ -47,13 +47,6 @@ JOURNALS = {
         "issn": "1529-9651",
         "exclude": None,
         "source": "crossref"
-    },
-    "JEPM": {
-        "name": "Journal of Exotic Pet Medicine",
-        "abbrev": "JEPM",
-        "query": '"J Exot Pet Med"[Journal]',
-        "exclude": None,
-        "source": "pubmed"
     }
 }
 
