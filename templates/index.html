@@ -475,6 +475,11 @@
                         <input type="number" id="num-questions" min="1" max="20" value="5">
                     </div>
 
+                    <div class="form-group">
+                        <label for="filter-word">Filter Word (Titles):</label>
+                        <input type="text" id="filter-word" placeholder="e.g. reptile, parrot, snake...">
+                    </div>
+
                     <button class="btn btn-primary" id="generate-btn" onclick="generateMCQ()">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2v4m0 12v4m-7-10H1m22 0h-4m-2.636-5.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m0-10.728l2.828 2.828m5.072 5.072l2.828 2.828"/>
@@ -649,6 +654,7 @@
             const numQuestions = document.getElementById('num-questions').value;
             const months = document.getElementById('date-range-select').value;
             const journal = document.getElementById('journal-select').value;
+            const filterWord = document.getElementById('filter-word').value.trim();
             const generateBtn = document.getElementById('generate-btn');
             const questionsSection = document.getElementById('questions-section');
             const previewContent = document.getElementById('mcq-preview');
@@ -662,7 +668,7 @@
                 const response = await fetch('/api/generate-mcq', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ num_questions: numQuestions, months: months, journal: journal })
+                    body: JSON.stringify({ num_questions: numQuestions, months: months, journal: journal, filter_word: filterWord })
                 });
 
                 const data = await response.json();

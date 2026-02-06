@@ -640,6 +640,7 @@ def generate_mcq():
     num_questions = int(data.get('num_questions', 5))
     months = int(data.get('months', 12))
     journal = data.get('journal', 'all')
+    filter_word = data.get('filter_word', '').strip().lower()
 
     # Fetch articles using the selected time period and journal
     articles = search_articles(months, journal)
@@ -649,6 +650,15 @@ def generate_mcq():
             "success": False,
             "error": f"No articles found in the selected time period ({months} months)"
         })
+
+    # Filter articles by filter word in title (if provided)
+    if filter_word:
+        articles = [a for a in articles if filter_word in a['title'].lower()]
+        if not articles:
+            return jsonify({
+                "success": False,
+                "error": f"No articles found with '{filter_word}' in title"
+            })
 
     # Filter articles with abstracts
     articles_with_abstracts = [a for a in articles if a['abstract'] != "No abstract available"]
