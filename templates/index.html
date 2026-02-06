@@ -651,6 +651,7 @@
                 }
             } catch (error) {
                 chartContainer.innerHTML = '<p style="color: #e53e3e; font-size: 0.9rem;">Failed to load chart</p>';
+                document.getElementById('total-articles').textContent = '';
             }
         }
 
@@ -678,6 +679,24 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    // Check if no questions were generated
+                    if (!data.mcq_results || data.mcq_results.length === 0) {
+                        questionsSection.style.display = 'block';
+                        const noResultsMsg = data.message || 'No questions were generated with the selected criteria.';
+                        previewContent.innerHTML = noResultsMsg;
+                        formattedText = noResultsMsg;
+                        copyBtn.disabled = true;
+                        hint.textContent = 'Try different criteria';
+                        generateBtn.disabled = false;
+                        generateBtn.innerHTML = `
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2v4m0 12v4m-7-10H1m22 0h-4m-2.636-5.364l-2.828 2.828m-5.072 5.072l-2.828 2.828m0-10.728l2.828 2.828m5.072 5.072l2.828 2.828"/>
+                            </svg>
+                            Generate Questions
+                        `;
+                        return;
+                    }
+
                     // Format: Questions first, then all answers at the end
                     // Plain text version for copying
                     let questionsText = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
@@ -690,13 +709,13 @@
                     answersText += '=' .repeat(50) + '\n\n';
 
                     // HTML version for display with clickable links
-                    let questionsHtml = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
+                    let questionsHtml = '<strong>ACZM BOARD PREP - MCQ QUESTIONS</strong>\n';
                     questionsHtml += 'Generated from zoological medicine journals\n';
                     questionsHtml += 'DISCLAIMER: Questions were generated from abstracts only.\n';
                     questionsHtml += '=' .repeat(50) + '\n\n';
 
                     let answersHtml = '\n\n' + '=' .repeat(50) + '\n';
-                    answersHtml += 'ANSWER KEY\n';
+                    answersHtml += '<strong>ANSWER KEY</strong>\n';
                     answersHtml += '=' .repeat(50) + '\n\n';
 
                     // Key learning points section
@@ -705,7 +724,7 @@
                     learningPointsText += '=' .repeat(50) + '\n\n';
 
                     let learningPointsHtml = '\n\n' + '=' .repeat(50) + '\n';
-                    learningPointsHtml += 'KEY LEARNING POINTS\n';
+                    learningPointsHtml += '<strong>KEY LEARNING POINTS</strong>\n';
                     learningPointsHtml += '=' .repeat(50) + '\n\n';
 
                     data.mcq_results.forEach((mcq, index) => {
@@ -727,7 +746,7 @@
                             questionsText += questionPart.replace(/^QUESTION \d+:?\s*/i, '') + '\n\n';
                             questionsText += '-'.repeat(40) + '\n\n';
 
-                            questionsHtml += `QUESTION ${questionNum}\n`;
+                            questionsHtml += `<strong>QUESTION ${questionNum}</strong>\n`;
                             questionsHtml += questionPart.replace(/^QUESTION \d+:?\s*/i, '') + '\n\n';
                             questionsHtml += '-'.repeat(40) + '\n\n';
 
@@ -744,7 +763,7 @@
                             answersText += `PubMed: ${mcq.article_url}\n\n`;
                             answersText += answerPart.replace(/KEY LEARNING POINT:.*$/is, '').trim() + '\n\n';
 
-                            answersHtml += `QUESTION ${questionNum}:\n`;
+                            answersHtml += `<strong>QUESTION ${questionNum}:</strong>\n`;
                             answersHtml += `Reference: ${reference}\n`;
                             answersHtml += `PubMed: <a href="${mcq.article_url}" target="_blank" style="color: #2c5282;">${mcq.article_url}</a>\n\n`;
                             answersHtml += answerPart.replace(/KEY LEARNING POINT:.*$/is, '').trim() + '\n\n';
@@ -752,14 +771,14 @@
                             // Key learning points
                             if (keyLearning) {
                                 learningPointsText += `${questionNum}. ${keyLearning}\n\n`;
-                                learningPointsHtml += `${questionNum}. ${keyLearning}\n\n`;
+                                learningPointsHtml += `<strong>${questionNum}.</strong> ${keyLearning}\n\n`;
                             }
                         } else {
                             questionsText += `QUESTION ${questionNum}\n`;
                             questionsText += fullText + '\n\n';
                             questionsText += '-'.repeat(40) + '\n\n';
 
-                            questionsHtml += `QUESTION ${questionNum}\n`;
+                            questionsHtml += `<strong>QUESTION ${questionNum}</strong>\n`;
                             questionsHtml += fullText + '\n\n';
                             questionsHtml += '-'.repeat(40) + '\n\n';
                         }
@@ -771,7 +790,7 @@
                     relatedText += '=' .repeat(50) + '\n\n';
 
                     let relatedHtml = '\n\n' + '=' .repeat(50) + '\n';
-                    relatedHtml += 'RELATED ARTICLES TO CONSULT\n';
+                    relatedHtml += '<strong>RELATED ARTICLES TO CONSULT</strong>\n';
                     relatedHtml += '=' .repeat(50) + '\n\n';
 
                     if (data.related_articles && data.related_articles.length > 0) {

@@ -659,8 +659,10 @@ def generate_mcq():
         articles = [a for a in articles if filter_word in a['title'].lower()]
         if not articles:
             return jsonify({
-                "success": False,
-                "error": f"No articles found with '{filter_word}' in title"
+                "success": True,
+                "mcq_results": [],
+                "related_articles": [],
+                "message": f"No articles found with '{filter_word}' in title"
             })
 
     # Filter articles with abstracts
