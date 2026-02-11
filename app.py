@@ -756,34 +756,17 @@ def get_recipients():
 @app.route('/api/monthly-update', methods=['POST'])
 def monthly_update():
     """API endpoint to generate monthly literature update summary"""
-    # Fetch articles from the past month (1 month)
+    # Fetch articles from the past month (1 month) - use same function as UI
     months = 1
-
-    # Get articles by journal - fetch all in parallel for speed
-    journal_articles = {}
-    all_articles = []
-
-    def fetch_journal(j_key):
-        j_info = JOURNALS[j_key]
-        if j_info.get('source') == 'crossref':
-            return j_key, search_crossref(months, j_key, max_results=100)
-        else:
-            return j_key, search_pubmed_only(months, j_key)
-
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(fetch_journal, j_key): j_key for j_key in JOURNALS.keys()}
-        for future in as_completed(futures):
-            try:
-                j_key, articles = future.result(timeout=30)
-                journal_articles[j_key] = articles
-                all_articles.extend(articles)
-            except Exception as e:
-                j_key = futures[future]
-                print(f"Error fetching {j_key}: {e}")
-                journal_articles[j_key] = []
+    all_articles = search_articles(months, "all")
 
     # Count articles by journal
-    journal_counts = {j_key: len(articles) for j_key, articles in journal_articles.items()}
+    journal_counts = {j_key: 0 for j_key in JOURNALS.keys()}
+    for article in all_articles:
+        for j_key, j_info in JOURNALS.items():
+            if j_info['name'] == article.get('journal'):
+                journal_counts[j_key] += 1
+                break
 
     if not all_articles:
         return jsonify({
