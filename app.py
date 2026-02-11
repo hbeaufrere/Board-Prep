@@ -636,6 +636,65 @@ def get_journal_stats():
     })
 
 
+def find_related_articles_ai(mcq_results, candidate_articles):
+    """Use AI to find articles most related to the generated questions"""
+    if not candidate_articles or not mcq_results:
+        return candidate_articles[:10]
+
+    api_key = os.getenv('ANTHROPIC_API_KEY')
+    if not api_key:
+        return candidate_articles[:10]
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        # Extract question topics from MCQ results
+        question_summaries = []
+        for mcq in mcq_results:
+            question_summaries.append(f"- {mcq['article_title']}")
+
+        # Prepare candidate articles list
+        candidates_text = []
+        for idx, article in enumerate(candidate_articles[:30]):  # Limit to 30 candidates
+            candidates_text.append(f"{idx + 1}. {article['title']}")
+
+        prompt = f"""Based on these MCQ question topics:
+{chr(10).join(question_summaries)}
+
+From the following articles, select the 10 most related articles that would help students learn more about these topics. Return ONLY the numbers of the 10 most relevant articles, separated by commas (e.g., "3, 7, 12, 1, 15, 8, 22, 5, 19, 11").
+
+Articles:
+{chr(10).join(candidates_text)}
+
+Return only the numbers, nothing else:"""
+
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=100,
+            timeout=30.0,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        # Parse response to get article indices
+        response = message.content[0].text.strip()
+        indices = [int(x.strip()) - 1 for x in response.split(',') if x.strip().isdigit()]
+
+        # Get the selected articles in order
+        related = []
+        for idx in indices:
+            if 0 <= idx < len(candidate_articles):
+                related.append(candidate_articles[idx])
+            if len(related) >= 10:
+                break
+
+        return related if related else candidate_articles[:10]
+
+    except Exception as e:
+        print(f"Error finding related articles: {e}")
+        return candidate_articles[:10]
+
+
 @app.route('/api/generate-mcq', methods=['POST'])
 def generate_mcq():
     """API endpoint to generate MCQs"""
@@ -678,8 +737,8 @@ def generate_mcq():
     # Get PMIDs of selected articles
     selected_pmids = {a['pmid'] for a in selected_articles}
 
-    # Get related articles (articles not selected, up to 10)
-    related_articles = [a for a in articles_with_abstracts if a['pmid'] not in selected_pmids][:10]
+    # Get candidate articles (articles not selected)
+    candidate_articles = [a for a in articles_with_abstracts if a['pmid'] not in selected_pmids]
 
     # Generate MCQs in parallel for faster processing
     mcq_results = []
@@ -700,6 +759,9 @@ def generate_mcq():
                     "article_year": article['pub_date'],
                     "questions": f"Error generating question: {str(e)}"
                 })
+
+    # Use AI to find truly related articles
+    related_articles = find_related_articles_ai(mcq_results, candidate_articles)
 
     return jsonify({
         "success": True,
