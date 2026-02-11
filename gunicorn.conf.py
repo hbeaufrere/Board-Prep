@@ -1,0 +1,4 @@
+# Gunicorn configuration file
+timeout = 300  # 5 minute timeout for long-running requests
+workers = 1
+bind = "0.0.0.0:10000"
