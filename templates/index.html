@@ -881,12 +881,32 @@
                     updateText += '=' .repeat(50) + '\n';
                     updateText += '10 KEY POINTS FOR ACZM EXAMINATION:\n';
                     updateText += '=' .repeat(50) + '\n\n';
-                    updateText += data.key_points + '\n';
+                    updateText += data.key_points + '\n\n';
 
                     updateHtml += '=' .repeat(50) + '\n';
                     updateHtml += '<strong>10 KEY POINTS FOR ACZM EXAMINATION:</strong>\n';
                     updateHtml += '=' .repeat(50) + '\n\n';
-                    updateHtml += data.key_points + '\n';
+                    updateHtml += data.key_points + '\n\n';
+
+                    // Articles list with links
+                    if (data.articles && data.articles.length > 0) {
+                        updateText += '=' .repeat(50) + '\n';
+                        updateText += 'SOURCE ARTICLES:\n';
+                        updateText += '=' .repeat(50) + '\n\n';
+
+                        updateHtml += '=' .repeat(50) + '\n';
+                        updateHtml += '<strong>SOURCE ARTICLES:</strong>\n';
+                        updateHtml += '=' .repeat(50) + '\n\n';
+
+                        data.articles.forEach((article, idx) => {
+                            // Get first author for citation
+                            const firstAuthor = article.authors ? article.authors.split(',')[0].trim() : 'Unknown';
+                            const authorEtAl = article.authors && article.authors.includes(',') ? ' et al.' : '';
+
+                            updateText += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. ${article.url}\n\n`;
+                            updateHtml += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. <a href="${article.url}" target="_blank">[Link]</a>\n\n`;
+                        });
+                    }
 
                     formattedText = updateText;
                     questionsSection.style.display = 'block';

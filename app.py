@@ -760,20 +760,26 @@ def monthly_update():
     months = 1
     all_articles = search_articles(months, "all")
 
-    # Count articles by journal
+    # Count articles by journal using flexible matching
     journal_counts = {j_key: 0 for j_key in JOURNALS.keys()}
     for article in all_articles:
-        for j_key, j_info in JOURNALS.items():
-            if j_info['name'] == article.get('journal'):
-                journal_counts[j_key] += 1
-                break
+        article_journal = (article.get('journal') or '').lower()
+        if 'zoo' in article_journal and 'wildl' in article_journal:
+            journal_counts['JZWM'] += 1
+        elif 'avian' in article_journal:
+            journal_counts['JAMS'] += 1
+        elif 'wildl' in article_journal and 'dis' in article_journal:
+            journal_counts['JWD'] += 1
+        elif 'herpetol' in article_journal:
+            journal_counts['JHMS'] += 1
 
     if not all_articles:
         return jsonify({
             "success": True,
             "journal_counts": journal_counts,
             "topics_summary": "No articles found in the past month.",
-            "key_points": ""
+            "key_points": "",
+            "articles": []
         })
 
     # Filter to articles with abstracts for summary
@@ -858,11 +864,21 @@ TOPICS SUMMARY:
             topics_summary = response_text
             key_points = ""
 
+        # Prepare articles list for response
+        articles_list = [{
+            "title": a['title'],
+            "authors": a['authors'],
+            "journal": a['journal'],
+            "year": a['pub_date'],
+            "url": a['url']
+        } for a in all_articles]
+
         return jsonify({
             "success": True,
             "journal_counts": journal_counts,
             "topics_summary": topics_summary,
-            "key_points": key_points
+            "key_points": key_points,
+            "articles": articles_list
         })
 
     except Exception as e:
@@ -870,7 +886,8 @@ TOPICS SUMMARY:
         return jsonify({
             "success": False,
             "error": f"Error generating summary: {str(e)}",
-            "journal_counts": journal_counts
+            "journal_counts": journal_counts,
+            "articles": []
         })
 
 
