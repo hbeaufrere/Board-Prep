@@ -428,6 +428,8 @@ For each question:
 4. Provide a brief explanation
 5. Provide ONE key learning point from this article
 
+IMPORTANT CONSTRAINT: Do NOT ask questions that require memorizing specific numeric values such as drug doses, laboratory reference ranges, blood values, measurement thresholds, or any other precise numbers. Questions should test conceptual understanding, clinical reasoning, species-specific biology, and diagnostic/treatment principles — not the ability to recall exact figures.
+
 Format each question as:
 QUESTION [number]:
 [Question text]
@@ -730,9 +732,35 @@ def generate_mcq():
     if not articles_with_abstracts:
         articles_with_abstracts = articles
 
-    # Randomly select articles for questions
+    # Randomly select articles for questions, with JWD weighted at 75% of other journals
     num_articles = min(num_questions, len(articles_with_abstracts))
-    selected_articles = random.sample(articles_with_abstracts, num_articles)
+    def is_jwd(article):
+        j = article.get('journal', '').lower()
+        return 'wildl' in j and 'dis' in j
+
+    weights = [0.75 if is_jwd(a) else 1.0 for a in articles_with_abstracts]
+    total = sum(weights)
+    norm_weights = [w / total for w in weights]
+    selected_articles = random.choices(articles_with_abstracts, weights=norm_weights, k=num_articles)
+    # Deduplicate while preserving order (random.choices can repeat)
+    seen = set()
+    unique_selected = []
+    for a in selected_articles:
+        key = a['pmid']
+        if key not in seen:
+            seen.add(key)
+            unique_selected.append(a)
+    # If deduplication reduced count, fill from remaining articles
+    if len(unique_selected) < num_articles:
+        remaining = [a for a in articles_with_abstracts if a['pmid'] not in seen]
+        remaining_weights = [0.75 if is_jwd(a) else 1.0 for a in remaining]
+        rem_total = sum(remaining_weights)
+        if rem_total > 0 and remaining:
+            rem_norm = [w / rem_total for w in remaining_weights]
+            extras = random.choices(remaining, weights=rem_norm,
+                                    k=num_articles - len(unique_selected))
+            unique_selected.extend(extras)
+    selected_articles = unique_selected[:num_articles]
 
     # Get PMIDs of selected articles
     selected_pmids = {a['pmid'] for a in selected_articles}
