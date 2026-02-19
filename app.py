@@ -4,6 +4,7 @@ Extracts articles from veterinary journals and generates ACZM-style MCQs
 """
 
 import os
+import sys
 import random
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -11,7 +12,13 @@ from flask import Flask, render_template, jsonify, request
 import requests
 from dotenv import load_dotenv
 
-load_dotenv()
+# Resolve .env path for both normal and PyInstaller bundled execution
+if getattr(sys, 'frozen', False):
+    _base_path = sys._MEIPASS
+else:
+    _base_path = os.path.dirname(os.path.abspath(__file__))
+
+load_dotenv(os.path.join(_base_path, '.env'))
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')
