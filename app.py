@@ -451,7 +451,7 @@ KEY LEARNING POINT: [One major takeaway from this article that board candidates 
 Make questions appropriate for board-level veterinary specialists focusing on zoo and wildlife medicine."""
 
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-6",
             max_tokens=2000,
             messages=[
                 {"role": "user", "content": prompt}
@@ -672,7 +672,7 @@ Articles:
 Return only the numbers, nothing else:"""
 
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-6",
             max_tokens=100,
             timeout=30.0,
             messages=[{"role": "user", "content": prompt}]
@@ -935,7 +935,7 @@ TOPICS SUMMARY:
 10. [Point 10]"""
 
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-4-6",
             max_tokens=3000,
             timeout=120.0,  # 2 minute timeout
             messages=[

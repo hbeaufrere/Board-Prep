@@ -682,6 +682,7 @@
                     let questionsText = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
                     questionsText += 'Generated from zoological medicine journals\n';
                     questionsText += 'DISCLAIMER: Questions were generated from abstracts only.\n';
+                    questionsText += 'Sources: JAMS, JWD, JHMS, and JZWM. Period: past ' + document.getElementById('date-range-select').value + ' months.\n';
                     questionsText += '=' .repeat(50) + '\n\n';
 
                     let answersText = '\n\n' + '=' .repeat(50) + '\n';
@@ -692,6 +693,7 @@
                     let questionsHtml = '<strong>ACZM BOARD PREP - MCQ QUESTIONS</strong>\n';
                     questionsHtml += 'Generated from zoological medicine journals\n';
                     questionsHtml += 'DISCLAIMER: Questions were generated from abstracts only.\n';
+                    questionsHtml += 'Sources: JAMS, JWD, JHMS, and JZWM. Period: past ' + document.getElementById('date-range-select').value + ' months.\n';
                     questionsHtml += '=' .repeat(50) + '\n\n';
 
                     let answersHtml = '\n\n' + '=' .repeat(50) + '\n';
