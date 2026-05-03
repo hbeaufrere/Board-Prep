@@ -1058,13 +1058,25 @@ TOPIC NAME 2 (contributing journals):
         output_tokens = getattr(usage, 'output_tokens', 0) if usage else 0
         cost_usd = (input_tokens * 5.0 / 1_000_000) + (output_tokens * 25.0 / 1_000_000)
 
-        # Split response into topics summary and key points
-        if "---" in response_text:
-            parts = response_text.split("---", 1)
-            topics_summary = parts[0].strip()
-            key_points = parts[1].strip() if len(parts) > 1 else ""
+        # Split response into topics summary and key points by anchoring on
+        # the explicit KEY POINTS header. Splitting on a "---" separator is
+        # unreliable now that the richer prompt produces longer topic blocks
+        # (the model often uses --- between topics as a natural break, which
+        # would clobber the second section).
+        kp_match = re.search(
+            r'(?im)^\s*(?:\d+\s+)?KEY POINTS FOR ACZM EXAMINATION\s*:?',
+            response_text,
+        )
+        if kp_match:
+            topics_summary = response_text[:kp_match.start()].strip()
+            # Drop a trailing "---" separator from the topics summary if one
+            # is present immediately before the key points header.
+            topics_summary = re.sub(r'\n\s*-{3,}\s*$', '', topics_summary).strip()
+            # The frontend renders its own heading for the key points list,
+            # so strip the model's heading line to avoid duplication.
+            key_points = response_text[kp_match.end():].lstrip(' :\n').rstrip()
         else:
-            topics_summary = response_text
+            topics_summary = response_text.strip()
             key_points = ""
 
         # The reference list returned to the client must mirror the numbered
