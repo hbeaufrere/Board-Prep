@@ -52,9 +52,15 @@ JOURNALS = {
 
 
 def get_date_range(months=12):
-    """Get date range for the specified number of months"""
+    """Get date range for the specified number of months.
+
+    Adds a small lookback buffer so that articles indexed near the
+    boundary aren't missed when a monthly run is 1-2 days late.
+    """
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=months * 30)
+    # 7-day buffer absorbs late runs and indexing lag for quarterly journals.
+    buffer_days = 7
+    start_date = end_date - timedelta(days=months * 30 + buffer_days)
     return start_date.strftime("%Y/%m/%d"), end_date.strftime("%Y/%m/%d")
 
 
@@ -67,19 +73,22 @@ def search_crossref(months=12, journal="JHMS", max_results=200):
         print(f"No ISSN configured for {journal}")
         return []
 
-    # Calculate date range
+    # Calculate date range with buffer (matches get_date_range).
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=months * 30)
+    start_date = end_date - timedelta(days=months * 30 + 7)
     from_date = start_date.strftime("%Y-%m-%d")
 
     articles = []
     try:
-        # CrossRef API endpoint for works by ISSN
+        # CrossRef API endpoint for works by ISSN.
+        # Filter on index-date (when CrossRef ingested the record) instead of
+        # pub-date so articles whose stated publication date predates the
+        # rolling window are still picked up if they were just indexed.
         url = "https://api.crossref.org/journals/{}/works".format(issn)
         params = {
-            "filter": f"from-pub-date:{from_date}",
+            "filter": f"from-index-date:{from_date}",
             "rows": max_results,
-            "sort": "published",
+            "sort": "indexed",
             "order": "desc"
         }
         headers = {
@@ -155,12 +164,12 @@ def get_crossref_article_count(months=12, journal="JHMS"):
 
     try:
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=months * 30)
+        start_date = end_date - timedelta(days=months * 30 + 7)
         from_date = start_date.strftime("%Y-%m-%d")
 
         url = "https://api.crossref.org/journals/{}/works".format(issn)
         params = {
-            "filter": f"from-pub-date:{from_date}",
+            "filter": f"from-index-date:{from_date}",
             "rows": 0  # Just get count, no results
         }
         headers = {
@@ -193,7 +202,10 @@ def get_article_count(months=12, journal="JZWM"):
     if j_info['exclude']:
         journal_query = f"({journal_query} NOT {j_info['exclude']}[Publication Type])"
 
-    query = f'{journal_query} AND ("{start_date}"[Date - Publication] : "{end_date}"[Date - Publication])'
+    # Filter on Entry Date (when PubMed indexed the article) rather than
+    # Publication Date so quarterly journals like JAMS aren't dropped when
+    # their issue date falls outside the rolling window.
+    query = f'{journal_query} AND ("{start_date}"[Date - Entry] : "{end_date}"[Date - Entry])'
 
     search_url = f"{PUBMED_BASE_URL}/esearch.fcgi"
     search_params = {
@@ -261,7 +273,10 @@ def search_pubmed_only(months=12, journal="all_pubmed"):
         if j_info['exclude']:
             journal_query = f"({journal_query} NOT {j_info['exclude']}[Publication Type])"
 
-    query = f'{journal_query} AND ("{start_date}"[Date - Publication] : "{end_date}"[Date - Publication])'
+    # Filter on Entry Date (when PubMed indexed the article) rather than
+    # Publication Date so quarterly journals like JAMS aren't dropped when
+    # their issue date falls outside the rolling window.
+    query = f'{journal_query} AND ("{start_date}"[Date - Entry] : "{end_date}"[Date - Entry])'
 
     # First, search for article IDs
     search_url = f"{PUBMED_BASE_URL}/esearch.fcgi"
