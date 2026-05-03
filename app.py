@@ -913,21 +913,15 @@ def monthly_update():
     articles_with_abstracts = [a for a in all_articles if a['abstract'] != "No abstract available"]
     articles_without_abstracts = [a for a in all_articles if a['abstract'] == "No abstract available"]
 
-    # Articles with abstracts that exceed the prompt cap below. They aren't
-    # sent to the model but are surfaced separately so the report still
-    # acknowledges them.
-    overflow_articles_with_abstracts = []
-
     if not articles_with_abstracts:
         # Edge case: nothing has abstracts. Fall back to titles only so the
         # request doesn't fail outright; the model will note the limitation.
         articles_with_abstracts = all_articles[:20]
         articles_without_abstracts = []
     else:
-        # Round-robin select across journals so a single high-volume journal
-        # (or the PubMed-first ordering) doesn't crowd out CrossRef-sourced
-        # journals like JHMS, whose abstracts are rarer and which currently
-        # get appended at the end of the list.
+        # Round-robin reorder by journal so the [N] reference numbering and
+        # citation distribution interleave the journals (no cap: every
+        # abstract-bearing article is sent to the model).
         def _journal_key(article):
             j = (article.get('journal') or '').lower()
             if 'avian' in j:
@@ -945,24 +939,12 @@ def monthly_update():
         for a in articles_with_abstracts:
             buckets.setdefault(_journal_key(a), []).append(a)
 
-        # 50 keeps almost every realistic month fully covered while staying
-        # well within the model's input budget (50 * 800 chars per abstract
-        # plus framing is ~12k tokens).
-        max_total = 50
-        selected = []
-        while len(selected) < max_total and any(buckets.values()):
+        interleaved = []
+        while any(buckets.values()):
             for k in list(buckets.keys()):
                 if buckets[k]:
-                    selected.append(buckets[k].pop(0))
-                    if len(selected) >= max_total:
-                        break
-
-        # Anything still sitting in the buckets had an abstract but didn't
-        # fit. Preserve it so the user can see what wasn't summarized.
-        for k in buckets:
-            overflow_articles_with_abstracts.extend(buckets[k])
-
-        articles_with_abstracts = selected
+                    interleaved.append(buckets[k].pop(0))
+        articles_with_abstracts = interleaved
 
     # Prepare numbered article summaries for Claude. The numbering becomes the
     # reference list shown at the bottom of the report; the model is asked to
@@ -976,9 +958,16 @@ def monthly_update():
                 journal_abbrev = j_info['abbrev']
                 break
 
+        # Send the full abstract; only truncate pathologically long ones so
+        # the prompt stays well-bounded. Most abstracts are well under 4000
+        # chars so this rarely triggers.
+        abstract_text = a['abstract']
+        if len(abstract_text) > 4000:
+            abstract_text = abstract_text[:4000] + '...'
+
         article_summaries.append(
             f"[{idx}] {a['title']} ({journal_abbrev}, {a['pub_date']})\n"
-            f"Abstract: {a['abstract'][:800]}..."
+            f"Abstract: {abstract_text}"
         )
 
     articles_text = "\n\n---\n\n".join(article_summaries)
@@ -1062,6 +1051,13 @@ TOPIC NAME 2 (contributing journals):
         # model may still emit. We keep dashes and digits intact.
         response_text = _strip_markdown_emphasis(response_text)
 
+        # Cost FYI for the operator. claude-opus-4-7 standard pricing:
+        # $5/M input tokens, $25/M output tokens.
+        usage = getattr(message, 'usage', None)
+        input_tokens = getattr(usage, 'input_tokens', 0) if usage else 0
+        output_tokens = getattr(usage, 'output_tokens', 0) if usage else 0
+        cost_usd = (input_tokens * 5.0 / 1_000_000) + (output_tokens * 25.0 / 1_000_000)
+
         # Split response into topics summary and key points
         if "---" in response_text:
             parts = response_text.split("---", 1)
@@ -1093,15 +1089,6 @@ TOPIC NAME 2 (contributing journals):
             "url": a['url']
         } for a in articles_without_abstracts]
 
-        # Articles that did have abstracts but didn't fit the prompt cap.
-        articles_overflow = [{
-            "title": a['title'],
-            "authors": a['authors'],
-            "journal": a['journal'],
-            "year": a['pub_date'],
-            "url": a['url']
-        } for a in overflow_articles_with_abstracts]
-
         return jsonify({
             "success": True,
             "journal_counts": journal_counts,
@@ -1109,7 +1096,11 @@ TOPIC NAME 2 (contributing journals):
             "key_points": key_points,
             "articles": articles_list,
             "articles_without_abstracts": articles_no_abstract,
-            "articles_overflow": articles_overflow
+            "usage": {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cost_usd": round(cost_usd, 4)
+            }
         })
 
     except Exception as e:

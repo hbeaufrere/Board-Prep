@@ -948,27 +948,6 @@
                         });
                     }
 
-                    // Articles that had abstracts but exceeded the prompt
-                    // cap. Surfaced here so the reader knows nothing has
-                    // been silently dropped.
-                    if (data.articles_overflow && data.articles_overflow.length > 0) {
-                        updateText += '=' .repeat(50) + '\n';
-                        updateText += 'ADDITIONAL ARTICLES (with abstracts, not included in summary due to volume):\n';
-                        updateText += '=' .repeat(50) + '\n\n';
-
-                        updateHtml += '=' .repeat(50) + '\n';
-                        updateHtml += '<strong>ADDITIONAL ARTICLES (with abstracts, not included in summary due to volume):</strong>\n';
-                        updateHtml += '=' .repeat(50) + '\n\n';
-
-                        data.articles_overflow.forEach((article, idx) => {
-                            const firstAuthor = article.authors ? article.authors.split(',')[0].trim() : 'Unknown';
-                            const authorEtAl = article.authors && article.authors.includes(',') ? ' et al.' : '';
-
-                            updateText += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. ${article.url}\n\n`;
-                            updateHtml += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. <a href="${article.url}" target="_blank">[Link]</a>\n\n`;
-                        });
-                    }
-
                     // Articles whose abstracts were not available from the
                     // indexer (common for JHMS via CrossRef). They couldn't
                     // be cited in the summary but are listed here so the
@@ -995,7 +974,17 @@
                     questionsSection.style.display = 'block';
                     previewContent.innerHTML = updateHtml.replace(/\n/g, '<br>');
                     copyBtn.disabled = false;
-                    hint.textContent = 'Monthly update generated - use Copy to save';
+
+                    // Cost is FYI for the operator only — deliberately kept
+                    // out of formattedText so it never lands in the copy.
+                    let hintText = 'Monthly update generated - use Copy to save';
+                    if (data.usage && typeof data.usage.cost_usd === 'number') {
+                        const cost = data.usage.cost_usd.toFixed(4);
+                        const inTok = data.usage.input_tokens || 0;
+                        const outTok = data.usage.output_tokens || 0;
+                        hintText += ` • Cost: $${cost} (${inTok} in / ${outTok} out tokens)`;
+                    }
+                    hint.textContent = hintText;
                     showAlert('Monthly literature update generated!', 'success');
                 } else {
                     showAlert(data.error || 'Failed to generate monthly update', 'error');
