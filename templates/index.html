@@ -926,23 +926,25 @@
                     updateHtml += '=' .repeat(50) + '\n\n';
                     updateHtml += data.key_points + '\n\n';
 
-                    // Articles list with links
+                    // References list. Numbering matches the [N] citations
+                    // used in the topics summary and key points above.
                     if (data.articles && data.articles.length > 0) {
                         updateText += '=' .repeat(50) + '\n';
-                        updateText += 'SOURCE ARTICLES:\n';
+                        updateText += 'REFERENCES:\n';
                         updateText += '=' .repeat(50) + '\n\n';
 
                         updateHtml += '=' .repeat(50) + '\n';
-                        updateHtml += '<strong>SOURCE ARTICLES:</strong>\n';
+                        updateHtml += '<strong>REFERENCES:</strong>\n';
                         updateHtml += '=' .repeat(50) + '\n\n';
 
                         data.articles.forEach((article, idx) => {
                             // Get first author for citation
                             const firstAuthor = article.authors ? article.authors.split(',')[0].trim() : 'Unknown';
                             const authorEtAl = article.authors && article.authors.includes(',') ? ' et al.' : '';
+                            const refNum = idx + 1;
 
-                            updateText += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. ${article.url}\n\n`;
-                            updateHtml += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. <a href="${article.url}" target="_blank">[Link]</a>\n\n`;
+                            updateText += `[${refNum}] ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. ${article.url}\n\n`;
+                            updateHtml += `[${refNum}] ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. <a href="${article.url}" target="_blank">[Link]</a>\n\n`;
                         });
                     }
 

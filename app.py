@@ -918,9 +918,11 @@ def monthly_update():
         # Limit to 30 articles to avoid token limits
         articles_with_abstracts = articles_with_abstracts[:30]
 
-    # Prepare article summaries for Claude
+    # Prepare numbered article summaries for Claude. The numbering becomes the
+    # reference list shown at the bottom of the report; the model is asked to
+    # cite using these same [N] tokens.
     article_summaries = []
-    for a in articles_with_abstracts:
+    for idx, a in enumerate(articles_with_abstracts, start=1):
         # Get journal abbreviation
         journal_abbrev = a['journal']
         for j_key, j_info in JOURNALS.items():
@@ -928,7 +930,10 @@ def monthly_update():
                 journal_abbrev = j_info['abbrev']
                 break
 
-        article_summaries.append(f"{a['title']} ({journal_abbrev}, {a['pub_date']})\nAbstract: {a['abstract'][:800]}...")
+        article_summaries.append(
+            f"[{idx}] {a['title']} ({journal_abbrev}, {a['pub_date']})\n"
+            f"Abstract: {a['abstract'][:800]}..."
+        )
 
     articles_text = "\n\n---\n\n".join(article_summaries)
 
@@ -949,6 +954,8 @@ def monthly_update():
 
         prompt = f"""You are reviewing the latest zoological medicine literature from the past month. Below are recent articles from veterinary journals (JZWM = Journal of Zoo and Wildlife Medicine, JAMS = Journal of Avian Medicine and Surgery, JWD = Journal of Wildlife Diseases, JHMS = Journal of Herpetological Medicine and Surgery).
 
+Each article is preceded by its reference number in square brackets, e.g. [1], [2]. You MUST cite the supporting article(s) for every claim using these same bracketed reference numbers. Use [3] for a single source and [1, 4, 7] for multiple. Place the citation at the end of the sentence or clause it supports.
+
 ARTICLES:
 {articles_text}
 
@@ -960,10 +967,11 @@ Organize the literature by major topics/themes (e.g., Infectious Diseases, Anest
 - Include species/taxa studied, the clinical or scientific question, and the practical takeaway.
 - Mention which journals contributed (e.g., "JZWM, JWD").
 - Where relevant, briefly note pathophysiology, diagnostic approach, treatment, or epidemiology that an ACZM candidate would be expected to understand.
+- Cite the supporting articles with bracketed reference numbers, e.g., [2, 5].
 Aim for 4-8 topics covering the breadth of the literature, with enough depth to actually study from.
 
 SECTION 2 - 12 KEY POINTS FOR ACZM EXAMINATION
-Extract the 12 most important clinical or scientific takeaways for the American College of Zoological Medicine board examination. Each point should be a complete, specific, exam-ready statement (2-3 sentences) that explains what to know AND why it matters clinically. Avoid vague generalities. Number them 1-12.
+Extract the 12 most important clinical or scientific takeaways for the American College of Zoological Medicine board examination. Each point should be a complete, specific, exam-ready statement (2-3 sentences) that explains what to know AND why it matters clinically, and MUST end with the bracketed reference number(s) of the source article(s), e.g. "... resulting in higher anesthetic mortality. [4]". Avoid vague generalities. Number the points 1-12.
 
 CRITICAL FORMATTING RULES:
 - Output plain text only. Do NOT use any markdown formatting.
@@ -971,26 +979,27 @@ CRITICAL FORMATTING RULES:
 - Do NOT use underscores (_) for emphasis.
 - Use UPPERCASE for section headers and topic names instead of bold.
 - Use simple dashes (-) or numbers for lists, not asterisks.
+- Only cite reference numbers that actually appear in the ARTICLES list above. Do not invent numbers.
 
 Format your response exactly as:
 
 TOPICS SUMMARY:
 
 TOPIC NAME 1 (contributing journals):
-[2-4 sentences synthesizing the findings, with species, clinical question, and practical takeaway.]
+2-4 sentences synthesizing the findings, with species, clinical question, practical takeaway, and bracketed citations like [1, 3].
 
 TOPIC NAME 2 (contributing journals):
-[2-4 sentences ...]
+2-4 sentences ... [2, 5].
 
 (continue for all topics)
 
 ---
 
 12 KEY POINTS FOR ACZM EXAMINATION:
-1. [2-3 sentence exam-ready point]
-2. [2-3 sentence exam-ready point]
+1. 2-3 sentence exam-ready point ending with [N] or [N, M].
+2. 2-3 sentence exam-ready point ending with [N] or [N, M].
 ...
-12. [2-3 sentence exam-ready point]"""
+12. 2-3 sentence exam-ready point ending with [N] or [N, M]."""
 
         message = client.messages.create(
             model="claude-opus-4-7",
@@ -1016,14 +1025,16 @@ TOPIC NAME 2 (contributing journals):
             topics_summary = response_text
             key_points = ""
 
-        # Prepare articles list for response
+        # The reference list returned to the client must mirror the numbered
+        # list fed to the model so the [N] citations in the summary align
+        # with the entries shown at the bottom of the report.
         articles_list = [{
             "title": a['title'],
             "authors": a['authors'],
             "journal": a['journal'],
             "year": a['pub_date'],
             "url": a['url']
-        } for a in all_articles]
+        } for a in articles_with_abstracts]
 
         return jsonify({
             "success": True,
