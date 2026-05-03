@@ -913,16 +913,21 @@ def monthly_update():
     articles_with_abstracts = [a for a in all_articles if a['abstract'] != "No abstract available"]
     articles_without_abstracts = [a for a in all_articles if a['abstract'] == "No abstract available"]
 
+    # Articles with abstracts that exceed the prompt cap below. They aren't
+    # sent to the model but are surfaced separately so the report still
+    # acknowledges them.
+    overflow_articles_with_abstracts = []
+
     if not articles_with_abstracts:
         # Edge case: nothing has abstracts. Fall back to titles only so the
         # request doesn't fail outright; the model will note the limitation.
         articles_with_abstracts = all_articles[:20]
         articles_without_abstracts = []
     else:
-        # Round-robin select up to 30 articles across journals so a single
-        # high-volume journal (or the PubMed-first ordering) doesn't crowd
-        # out CrossRef-sourced journals like JHMS, whose abstracts are
-        # rarer and which currently get appended at the end of the list.
+        # Round-robin select across journals so a single high-volume journal
+        # (or the PubMed-first ordering) doesn't crowd out CrossRef-sourced
+        # journals like JHMS, whose abstracts are rarer and which currently
+        # get appended at the end of the list.
         def _journal_key(article):
             j = (article.get('journal') or '').lower()
             if 'avian' in j:
@@ -940,15 +945,23 @@ def monthly_update():
         for a in articles_with_abstracts:
             buckets.setdefault(_journal_key(a), []).append(a)
 
-        max_total = 30
+        # 50 keeps almost every realistic month fully covered while staying
+        # well within the model's input budget (50 * 800 chars per abstract
+        # plus framing is ~12k tokens).
+        max_total = 50
         selected = []
-        # Round-robin across buckets until we hit max_total or run out.
         while len(selected) < max_total and any(buckets.values()):
             for k in list(buckets.keys()):
                 if buckets[k]:
                     selected.append(buckets[k].pop(0))
                     if len(selected) >= max_total:
                         break
+
+        # Anything still sitting in the buckets had an abstract but didn't
+        # fit. Preserve it so the user can see what wasn't summarized.
+        for k in buckets:
+            overflow_articles_with_abstracts.extend(buckets[k])
+
         articles_with_abstracts = selected
 
     # Prepare numbered article summaries for Claude. The numbering becomes the
@@ -1080,13 +1093,23 @@ TOPIC NAME 2 (contributing journals):
             "url": a['url']
         } for a in articles_without_abstracts]
 
+        # Articles that did have abstracts but didn't fit the prompt cap.
+        articles_overflow = [{
+            "title": a['title'],
+            "authors": a['authors'],
+            "journal": a['journal'],
+            "year": a['pub_date'],
+            "url": a['url']
+        } for a in overflow_articles_with_abstracts]
+
         return jsonify({
             "success": True,
             "journal_counts": journal_counts,
             "topics_summary": topics_summary,
             "key_points": key_points,
             "articles": articles_list,
-            "articles_without_abstracts": articles_no_abstract
+            "articles_without_abstracts": articles_no_abstract,
+            "articles_overflow": articles_overflow
         })
 
     except Exception as e:
