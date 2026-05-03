@@ -5,6 +5,7 @@ Extracts articles from veterinary journals and generates ACZM-style MCQs
 
 import os
 import random
+import re
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template, jsonify, request
@@ -49,6 +50,22 @@ JOURNALS = {
         "source": "crossref"
     }
 }
+
+
+def _strip_markdown_emphasis(text):
+    """Remove markdown emphasis markers (**, *, __, _) that look like noise
+    in plain-text output. Bullet dashes and numbered lists are left alone.
+    """
+    if not text:
+        return text
+    # Bold first, then italics, for both * and _ flavors.
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'__(.+?)__', r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'(?<!\w)\*(?!\s)(.+?)(?<!\s)\*(?!\w)', r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)', r'\1', text, flags=re.DOTALL)
+    # Convert leading "* " bullets to "- " (do not touch "1. " numbered lists).
+    text = re.sub(r'(?m)^(\s*)\*\s+', r'\1- ', text)
+    return text
 
 
 def get_date_range(months=12):
@@ -911,7 +928,7 @@ def monthly_update():
                 journal_abbrev = j_info['abbrev']
                 break
 
-        article_summaries.append(f"**{a['title']}** ({journal_abbrev}, {a['pub_date']})\nAbstract: {a['abstract'][:500]}...")
+        article_summaries.append(f"{a['title']} ({journal_abbrev}, {a['pub_date']})\nAbstract: {a['abstract'][:800]}...")
 
     articles_text = "\n\n---\n\n".join(article_summaries)
 
@@ -935,35 +952,60 @@ def monthly_update():
 ARTICLES:
 {articles_text}
 
-Please provide:
+Please provide a substantive, exam-oriented review with two sections.
 
-1. **TOPICS SUMMARY**: Organize the literature by major topics/themes (e.g., Infectious Diseases, Anesthesia, Surgery, Nutrition, Reproduction, Conservation Medicine, etc.). For each topic, briefly summarize the key findings from relevant articles. List which journals contributed to each topic.
+SECTION 1 - TOPICS SUMMARY
+Organize the literature by major topics/themes (e.g., Infectious Diseases, Anesthesia, Surgery, Nutrition, Reproduction, Conservation Medicine, Pathology, Toxicology, Imaging, Pharmacology). For each topic:
+- Write 2-4 sentences synthesizing the key findings across the relevant articles, not just one-liners.
+- Include species/taxa studied, the clinical or scientific question, and the practical takeaway.
+- Mention which journals contributed (e.g., "JZWM, JWD").
+- Where relevant, briefly note pathophysiology, diagnostic approach, treatment, or epidemiology that an ACZM candidate would be expected to understand.
+Aim for 4-8 topics covering the breadth of the literature, with enough depth to actually study from.
 
-2. **10 KEY POINTS FOR ACZM EXAMINATION**: Extract the 10 most important clinical or scientific takeaways that would be relevant for the American College of Zoological Medicine board examination. These should be specific, factual points that candidates should remember. Number them 1-10.
+SECTION 2 - 12 KEY POINTS FOR ACZM EXAMINATION
+Extract the 12 most important clinical or scientific takeaways for the American College of Zoological Medicine board examination. Each point should be a complete, specific, exam-ready statement (2-3 sentences) that explains what to know AND why it matters clinically. Avoid vague generalities. Number them 1-12.
+
+CRITICAL FORMATTING RULES:
+- Output plain text only. Do NOT use any markdown formatting.
+- Do NOT use asterisks (*) for bold, italics, or bullet points anywhere in your response.
+- Do NOT use underscores (_) for emphasis.
+- Use UPPERCASE for section headers and topic names instead of bold.
+- Use simple dashes (-) or numbers for lists, not asterisks.
 
 Format your response exactly as:
 
 TOPICS SUMMARY:
-[Your organized summary by topics]
+
+TOPIC NAME 1 (contributing journals):
+[2-4 sentences synthesizing the findings, with species, clinical question, and practical takeaway.]
+
+TOPIC NAME 2 (contributing journals):
+[2-4 sentences ...]
+
+(continue for all topics)
 
 ---
 
-10 KEY POINTS FOR ACZM EXAMINATION:
-1. [Point 1]
-2. [Point 2]
+12 KEY POINTS FOR ACZM EXAMINATION:
+1. [2-3 sentence exam-ready point]
+2. [2-3 sentence exam-ready point]
 ...
-10. [Point 10]"""
+12. [2-3 sentence exam-ready point]"""
 
         message = client.messages.create(
             model="claude-opus-4-7",
-            max_tokens=3000,
-            timeout=120.0,  # 2 minute timeout
+            max_tokens=6000,
+            timeout=180.0,  # 3 minute timeout for the longer response
             messages=[
                 {"role": "user", "content": prompt}
             ]
         )
 
         response_text = message.content[0].text
+
+        # Safety net: strip any stray markdown asterisks/underscores the
+        # model may still emit. We keep dashes and digits intact.
+        response_text = _strip_markdown_emphasis(response_text)
 
         # Split response into topics summary and key points
         if "---" in response_text:
