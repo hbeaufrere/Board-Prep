@@ -94,18 +94,23 @@ def search_crossref(months=12, journal="JHMS", max_results=200):
     end_date = datetime.now()
     start_date = end_date - timedelta(days=months * 30 + 7)
     from_date = start_date.strftime("%Y-%m-%d")
+    # Hard client-side cutoff for safety: anything older than this is rejected
+    # even if CrossRef returns it. We allow ~30 extra days of slack on top of
+    # the rolling window to absorb late metadata registration.
+    cutoff_date = end_date - timedelta(days=months * 30 + 30)
 
     articles = []
     try:
-        # CrossRef API endpoint for works by ISSN.
-        # Filter on index-date (when CrossRef ingested the record) instead of
-        # pub-date so articles whose stated publication date predates the
-        # rolling window are still picked up if they were just indexed.
+        # Filter on created-date (when CrossRef first received the record,
+        # close to the article's actual publication time). Earlier code used
+        # index-date, but CrossRef re-indexes old records whenever publishers
+        # touch their metadata, which surfaced years-old articles in the
+        # monthly window. created-date is stable and is what we actually want.
         url = "https://api.crossref.org/journals/{}/works".format(issn)
         params = {
-            "filter": f"from-index-date:{from_date}",
+            "filter": f"from-created-date:{from_date}",
             "rows": max_results,
-            "sort": "indexed",
+            "sort": "created",
             "order": "desc"
         }
         headers = {
@@ -119,6 +124,22 @@ def search_crossref(months=12, journal="JHMS", max_results=200):
         items = data.get('message', {}).get('items', [])
 
         for idx, item in enumerate(items):
+            # Defense in depth: drop anything whose created-date is older
+            # than the cutoff, in case CrossRef's filter behaves loosely.
+            created_parts = item.get('created', {}).get('date-parts', [[]])
+            if created_parts and created_parts[0]:
+                cp = created_parts[0]
+                try:
+                    created_dt = datetime(
+                        cp[0],
+                        cp[1] if len(cp) > 1 else 1,
+                        cp[2] if len(cp) > 2 else 1,
+                    )
+                    if created_dt < cutoff_date:
+                        continue
+                except (TypeError, ValueError):
+                    pass
+
             # Get title
             title_list = item.get('title', [])
             title = title_list[0] if title_list else 'No title'
@@ -186,7 +207,7 @@ def get_crossref_article_count(months=12, journal="JHMS"):
 
         url = "https://api.crossref.org/journals/{}/works".format(issn)
         params = {
-            "filter": f"from-index-date:{from_date}",
+            "filter": f"from-created-date:{from_date}",
             "rows": 0  # Just get count, no results
         }
         headers = {
