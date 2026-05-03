@@ -911,12 +911,45 @@ def monthly_update():
 
     # Filter to articles with abstracts for summary
     articles_with_abstracts = [a for a in all_articles if a['abstract'] != "No abstract available"]
+    articles_without_abstracts = [a for a in all_articles if a['abstract'] == "No abstract available"]
 
     if not articles_with_abstracts:
-        articles_with_abstracts = all_articles[:20]  # Use first 20 if none have abstracts
+        # Edge case: nothing has abstracts. Fall back to titles only so the
+        # request doesn't fail outright; the model will note the limitation.
+        articles_with_abstracts = all_articles[:20]
+        articles_without_abstracts = []
     else:
-        # Limit to 30 articles to avoid token limits
-        articles_with_abstracts = articles_with_abstracts[:30]
+        # Round-robin select up to 30 articles across journals so a single
+        # high-volume journal (or the PubMed-first ordering) doesn't crowd
+        # out CrossRef-sourced journals like JHMS, whose abstracts are
+        # rarer and which currently get appended at the end of the list.
+        def _journal_key(article):
+            j = (article.get('journal') or '').lower()
+            if 'avian' in j:
+                return 'JAMS'
+            if 'zoo' in j and 'wildl' in j:
+                return 'JZWM'
+            if 'wildl' in j and 'dis' in j:
+                return 'JWD'
+            if 'herpetol' in j:
+                return 'JHMS'
+            return 'OTHER'
+
+        from collections import OrderedDict
+        buckets = OrderedDict()
+        for a in articles_with_abstracts:
+            buckets.setdefault(_journal_key(a), []).append(a)
+
+        max_total = 30
+        selected = []
+        # Round-robin across buckets until we hit max_total or run out.
+        while len(selected) < max_total and any(buckets.values()):
+            for k in list(buckets.keys()):
+                if buckets[k]:
+                    selected.append(buckets[k].pop(0))
+                    if len(selected) >= max_total:
+                        break
+        articles_with_abstracts = selected
 
     # Prepare numbered article summaries for Claude. The numbering becomes the
     # reference list shown at the bottom of the report; the model is asked to
@@ -1036,12 +1069,24 @@ TOPIC NAME 2 (contributing journals):
             "url": a['url']
         } for a in articles_with_abstracts]
 
+        # Articles whose abstracts weren't available (common for JHMS via
+        # CrossRef). They can't be summarized but we still surface them so
+        # readers can find them manually.
+        articles_no_abstract = [{
+            "title": a['title'],
+            "authors": a['authors'],
+            "journal": a['journal'],
+            "year": a['pub_date'],
+            "url": a['url']
+        } for a in articles_without_abstracts]
+
         return jsonify({
             "success": True,
             "journal_counts": journal_counts,
             "topics_summary": topics_summary,
             "key_points": key_points,
-            "articles": articles_list
+            "articles": articles_list,
+            "articles_without_abstracts": articles_no_abstract
         })
 
     except Exception as e:

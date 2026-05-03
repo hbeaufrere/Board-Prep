@@ -948,6 +948,28 @@
                         });
                     }
 
+                    // Articles whose abstracts were not available from the
+                    // indexer (common for JHMS via CrossRef). They couldn't
+                    // be cited in the summary but are listed here so the
+                    // reader can still locate and consult them.
+                    if (data.articles_without_abstracts && data.articles_without_abstracts.length > 0) {
+                        updateText += '=' .repeat(50) + '\n';
+                        updateText += 'ADDITIONAL ARTICLES (no abstract available, not summarized):\n';
+                        updateText += '=' .repeat(50) + '\n\n';
+
+                        updateHtml += '=' .repeat(50) + '\n';
+                        updateHtml += '<strong>ADDITIONAL ARTICLES (no abstract available, not summarized):</strong>\n';
+                        updateHtml += '=' .repeat(50) + '\n\n';
+
+                        data.articles_without_abstracts.forEach((article, idx) => {
+                            const firstAuthor = article.authors ? article.authors.split(',')[0].trim() : 'Unknown';
+                            const authorEtAl = article.authors && article.authors.includes(',') ? ' et al.' : '';
+
+                            updateText += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. ${article.url}\n\n`;
+                            updateHtml += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. <a href="${article.url}" target="_blank">[Link]</a>\n\n`;
+                        });
+                    }
+
                     formattedText = updateText;
                     questionsSection.style.display = 'block';
                     previewContent.innerHTML = updateHtml.replace(/\n/g, '<br>');
