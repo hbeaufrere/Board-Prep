@@ -677,12 +677,42 @@
                         return;
                     }
 
+                    // Build the period string ("month", "6 months", "year", "2 years", ...)
+                    const monthsValue = parseInt(document.getElementById('date-range-select').value, 10);
+                    let periodStr;
+                    if (monthsValue === 1) {
+                        periodStr = 'month';
+                    } else if (monthsValue === 12) {
+                        periodStr = 'year';
+                    } else if (monthsValue % 12 === 0) {
+                        periodStr = (monthsValue / 12) + ' years';
+                    } else {
+                        periodStr = monthsValue + ' months';
+                    }
+
+                    // Build the journals string for the greeting
+                    const selectedJournal = document.getElementById('journal-select').value;
+                    const journalsStr = selectedJournal === 'all'
+                        ? 'JAMS, JHMS, JWD, and JZWM'
+                        : selectedJournal;
+
+                    const poolSize = data.pool_size || 0;
+                    const poolLine = poolSize > 0
+                        ? 'Questions were randomized from a pool of ' + poolSize + ' article' + (poolSize === 1 ? '' : 's') + '.'
+                        : '';
+
                     // Format: Questions first, then all answers at the end
                     // Plain text version for copying
-                    let questionsText = 'ACZM BOARD PREP - MCQ QUESTIONS\n';
+                    let questionsText = 'Dear Residents,\n';
+                    questionsText += 'Here is the MCQ for this month. Reminder: taken from articles of the past ' + periodStr + ' of ' + journalsStr + '.\n';
+                    if (poolLine) {
+                        questionsText += poolLine + '\n';
+                    }
+                    questionsText += '\n';
+                    questionsText += 'ACZM BOARD PREP - MCQ QUESTIONS\n';
                     questionsText += 'Generated from zoological medicine journals\n';
                     questionsText += 'DISCLAIMER: Questions were generated from abstracts only.\n';
-                    questionsText += 'Sources: JAMS, JWD, JHMS, and JZWM. Period: past ' + document.getElementById('date-range-select').value + ' months.\n';
+                    questionsText += 'Sources: ' + journalsStr + '. Period: past ' + periodStr + '.\n';
                     questionsText += '=' .repeat(50) + '\n\n';
 
                     let answersText = '\n\n' + '=' .repeat(50) + '\n';
@@ -690,10 +720,16 @@
                     answersText += '=' .repeat(50) + '\n\n';
 
                     // HTML version for display with clickable links
-                    let questionsHtml = '<strong>ACZM BOARD PREP - MCQ QUESTIONS</strong>\n';
+                    let questionsHtml = 'Dear Residents,\n';
+                    questionsHtml += 'Here is the MCQ for this month. Reminder: taken from articles of the past ' + periodStr + ' of ' + journalsStr + '.\n';
+                    if (poolLine) {
+                        questionsHtml += poolLine + '\n';
+                    }
+                    questionsHtml += '\n';
+                    questionsHtml += '<strong>ACZM BOARD PREP - MCQ QUESTIONS</strong>\n';
                     questionsHtml += 'Generated from zoological medicine journals\n';
                     questionsHtml += 'DISCLAIMER: Questions were generated from abstracts only.\n';
-                    questionsHtml += 'Sources: JAMS, JWD, JHMS, and JZWM. Period: past ' + document.getElementById('date-range-select').value + ' months.\n';
+                    questionsHtml += 'Sources: ' + journalsStr + '. Period: past ' + periodStr + '.\n';
                     questionsHtml += '=' .repeat(50) + '\n\n';
 
                     let answersHtml = '\n\n' + '=' .repeat(50) + '\n';

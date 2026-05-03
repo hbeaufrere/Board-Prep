@@ -738,6 +738,7 @@ def generate_mcq():
                 "success": True,
                 "mcq_results": [],
                 "related_articles": [],
+                "pool_size": 0,
                 "message": f"No articles found with '{filter_word}' in title"
             })
 
@@ -746,6 +747,9 @@ def generate_mcq():
 
     if not articles_with_abstracts:
         articles_with_abstracts = articles
+
+    # Pool size = number of candidate articles questions were randomized from.
+    pool_size = len(articles_with_abstracts)
 
     # Randomly select articles for questions, with JWD weighted at 75% of other journals
     num_articles = min(num_questions, len(articles_with_abstracts))
@@ -809,7 +813,8 @@ def generate_mcq():
     return jsonify({
         "success": True,
         "mcq_results": mcq_results,
-        "related_articles": related_articles
+        "related_articles": related_articles,
+        "pool_size": pool_size
     })
 
 
