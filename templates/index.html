@@ -381,6 +381,115 @@
             flex-direction: column;
             gap: 20px;
         }
+
+        input[type="text"], input[type="month"] {
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="month"]:focus {
+            outline: none;
+            border-color: #2c5282;
+        }
+
+        /* Monthly study material document */
+        .study-doc {
+            color: #2d3748;
+            line-height: 1.6;
+        }
+
+        .study-doc h1 {
+            font-size: 1.5rem;
+            color: #1a365d;
+            border-bottom: 3px solid #2c5282;
+            padding-bottom: 8px;
+            margin-bottom: 18px;
+        }
+
+        .study-doc h2 {
+            font-size: 1.15rem;
+            color: #2c5282;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+            margin: 28px 0 12px;
+        }
+
+        .study-doc h3 {
+            font-size: 1rem;
+            color: #2d3748;
+            margin: 16px 0 6px;
+        }
+
+        .study-doc p {
+            margin-bottom: 10px;
+        }
+
+        .study-doc a {
+            color: #2b6cb0;
+            word-break: break-word;
+        }
+
+        .study-doc ul, .study-doc ol {
+            margin: 0 0 12px;
+            padding-left: 24px;
+        }
+
+        .study-doc li {
+            margin-bottom: 8px;
+        }
+
+        .study-greeting {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .study-disclaimer {
+            background: #fffaf0;
+            border-left: 4px solid #dd6b20;
+            padding: 12px 15px;
+            margin: 14px 0;
+            font-size: 0.9rem;
+            border-radius: 4px;
+        }
+
+        .study-meta {
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        .study-body {
+            white-space: pre-wrap;
+        }
+
+        .study-question, .study-answer {
+            border-left: 3px solid #e2e8f0;
+            padding-left: 15px;
+            margin-bottom: 18px;
+        }
+
+        .study-source {
+            font-size: 0.85rem;
+            color: #4a5568;
+            margin-top: 6px;
+        }
+
+        .study-counts {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .study-counts li {
+            display: inline-block;
+            margin-right: 20px;
+        }
+
+        .study-reflist li {
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -465,17 +574,33 @@
                         Copy to Clipboard
                     </button>
 
-                    <button class="btn btn-primary" id="monthly-btn" onclick="generateMonthlyUpdate()" style="background: #48bb78;">
+                    <small id="hint" style="color: #718096;">Generate questions first</small>
+                </div>
+
+                <!-- Monthly Study Material Panel -->
+                <div class="card control-panel">
+                    <h2>Monthly Study Material</h2>
+                    <p style="font-size: 0.85rem; color: #718096; margin-top: -10px;">
+                        Full resident package for one calendar month: literature summary,
+                        10 MCQs, 10 key learning points, and further reading from the past 3 years.
+                    </p>
+
+                    <div class="form-group">
+                        <label for="study-month">Month:</label>
+                        <input type="month" id="study-month">
+                    </div>
+
+                    <button class="btn btn-primary" id="study-btn" onclick="generateStudyMaterial()" style="background: linear-gradient(135deg, #48bb78 0%, #2f855a 100%);">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                             <line x1="16" y1="2" x2="16" y2="6"/>
                             <line x1="8" y1="2" x2="8" y2="6"/>
                             <line x1="3" y1="10" x2="21" y2="10"/>
                         </svg>
-                        Monthly Literature Update
+                        Generate Monthly Study Material
                     </button>
 
-                    <small id="hint" style="color: #718096;">Generate questions first</small>
+                    <small id="study-hint" style="color: #718096;">Takes 2-4 minutes to generate</small>
                 </div>
 
                 <!-- Chart Panel -->
@@ -500,6 +625,31 @@
                     </button>
                 </div>
                 <div class="mcq-preview" id="mcq-preview"></div>
+            </div>
+
+            <!-- Monthly Study Material Output (full width) -->
+            <div class="card full-width" id="study-section" style="display: none;">
+                <div class="questions-header">
+                    <h2>Monthly Study Material</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary" onclick="copyStudyMaterial()" style="padding: 10px 20px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            Copy
+                        </button>
+                        <button class="btn btn-primary" onclick="exportStudyMaterialPDF()" style="padding: 10px 20px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Export PDF
+                        </button>
+                    </div>
+                </div>
+                <div id="study-preview" class="study-doc"></div>
             </div>
         </div>
 
@@ -530,9 +680,25 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            initStudyMonth();
             loadArticles();
             loadChart();
         });
+
+        // Default the study-material picker to the last complete calendar
+        // month, and stop it being set past the current one.
+        function initStudyMonth() {
+            const input = document.getElementById('study-month');
+            if (!input) return;
+
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const current = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+
+            const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            input.value = `${prev.getFullYear()}-${pad(prev.getMonth() + 1)}`;
+            input.max = current;
+        }
 
         async function loadArticles() {
             const loadingEl = document.getElementById('articles-loading');
@@ -866,143 +1032,424 @@
             });
         }
 
-        async function generateMonthlyUpdate() {
-            const monthlyBtn = document.getElementById('monthly-btn');
-            const questionsSection = document.getElementById('questions-section');
-            const previewContent = document.getElementById('mcq-preview');
-            const copyBtn = document.getElementById('copy-btn');
-            const hint = document.getElementById('hint');
+        // ---------------------------------------------------------------
+        // Monthly study material for residents
+        // ---------------------------------------------------------------
 
-            monthlyBtn.disabled = true;
-            monthlyBtn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating...';
+        let studyText = '';        // plain text, for the clipboard
+        let studyBodyHtml = '';    // structured HTML, for display and PDF
+        let studyDocTitle = 'ACZM Monthly Learning Material';
+
+        function escapeHtml(value) {
+            return String(value === null || value === undefined ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function studyYear(value) {
+            if (!value) return '';
+            const match = String(value).match(/\d{4}/);
+            return match ? match[0] : String(value);
+        }
+
+        // "Smith et al. Title. J Zoo Wildl Med. 2026."
+        function studyCitation(article) {
+            const authors = article.authors || '';
+            const firstAuthor = authors ? authors.split(',')[0].trim() : 'Unknown';
+            const suffix = authors.includes(',') ? ' et al.' : '.';
+            const abbrev = getJournalAbbrev(article.journal) || article.journal_abbrev || '';
+            const year = studyYear(article.year);
+            return `${firstAuthor}${suffix} ${article.title}. ${abbrev}. ${year}.`;
+        }
+
+        // MCQ results carry article_* keys; normalize them to the reference shape.
+        function mcqArticle(mcq) {
+            return {
+                title: mcq.article_title,
+                authors: mcq.article_authors,
+                journal: mcq.article_journal,
+                year: mcq.article_year,
+                url: mcq.article_url
+            };
+        }
+
+        // Turn "[3]" / "[1, 4]" into links to the matching reference entry.
+        function linkifyCitations(escapedText, refCount) {
+            return escapedText.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, function (match, nums) {
+                const linked = nums.split(',').map(function (part) {
+                    const label = part.trim();
+                    const idx = parseInt(label, 10);
+                    if (idx >= 1 && idx <= refCount) {
+                        return `<a href="#sm-ref-${idx}">${label}</a>`;
+                    }
+                    return label;
+                }).join(', ');
+                return `[${linked}]`;
+            });
+        }
+
+        function buildStudyMaterial(data) {
+            const period = data.period || {};
+            const label = period.label || '';
+            const days = period.days || '';
+            const refs = data.references || [];
+            const refCount = refs.length;
+            const relatedYears = data.related_years || 3;
+            const mcqs = data.mcq_results || [];
+
+            studyDocTitle = `ACZM Monthly Learning Material — ${label}`;
+
+            const html = [];
+            let text = '';
+
+            const rule = '='.repeat(60);
+
+            // --- Title and welcome -------------------------------------
+            const coverage = days
+                ? `Coverage window: 1–${days} ${label} (${days} days)`
+                : `Coverage window: ${label}`;
+            const sources = 'Journals screened: JZWM, JAMS, JWD, JHMS';
+            const counted = typeof data.article_count === 'number'
+                ? `${data.article_count} article${data.article_count === 1 ? '' : 's'} indexed`
+                : '';
+
+            const disclaimer = 'DISCLAIMER: This document was generated by AI (Claude). The literature '
+                + 'summary and the multiple choice questions were written from published abstracts only, '
+                + 'not from the full texts. Always consult the original article before relying on any '
+                + 'answer or learning point.';
+
+            text += `${studyDocTitle}\n${rule}\n\n`;
+            text += 'Dear Residents,\n\n';
+            text += `This is your monthly ACZM learning material and MCQ for the month of ${label}.\n\n`;
+            text += disclaimer + '\n\n';
+            text += `${coverage}\n${sources}\n`;
+            if (counted) text += counted + '\n';
+            text += '\n';
+
+            html.push(`<h1>${escapeHtml(studyDocTitle)}</h1>`);
+            html.push('<p class="study-greeting">Dear Residents,</p>');
+            html.push(`<p>This is your monthly ACZM learning material and MCQ for the month of <strong>${escapeHtml(label)}</strong>.</p>`);
+            html.push(`<div class="study-disclaimer">${escapeHtml(disclaimer)}</div>`);
+            html.push('<p class="study-meta">'
+                + escapeHtml(coverage) + '<br>'
+                + escapeHtml(sources)
+                + (counted ? '<br>' + escapeHtml(counted) : '')
+                + '</p>');
+
+            // --- 1. Literature summary ---------------------------------
+            text += `${rule}\n1. LITERATURE SUMMARY — ${label.toUpperCase()}\n${rule}\n\n`;
+            html.push(`<h2>1. Literature summary — ${escapeHtml(label)}</h2>`);
+
+            const counts = data.journal_counts || {};
+            const countKeys = Object.keys(counts);
+            if (countKeys.length) {
+                text += 'Articles by journal:\n';
+                let countHtml = '<ul class="study-counts">';
+                countKeys.forEach(function (key) {
+                    text += `  ${key}: ${counts[key]}\n`;
+                    countHtml += `<li><strong>${escapeHtml(key)}</strong>: ${escapeHtml(counts[key])}</li>`;
+                });
+                countHtml += '</ul>';
+                text += '\n';
+                html.push(countHtml);
+            }
+
+            const summary = data.topics_summary || '';
+            text += summary + '\n\n';
+            html.push(`<div class="study-body">${linkifyCitations(escapeHtml(summary), refCount)}</div>`);
+
+            // --- 2. Questions ------------------------------------------
+            text += `${rule}\n2. MULTIPLE CHOICE QUESTIONS (${mcqs.length})\n${rule}\n\n`;
+            html.push(`<h2>2. Multiple choice questions (${mcqs.length})</h2>`);
+
+            const answers = [];
+
+            mcqs.forEach(function (mcq, index) {
+                const num = index + 1;
+                const fullText = mcq.questions || '';
+                const marker = fullText.match(/CORRECT ANSWER:/i);
+                let questionPart = fullText;
+                let answerPart = '';
+
+                if (marker) {
+                    const start = fullText.indexOf(marker[0]);
+                    questionPart = fullText.substring(0, start).trim();
+                    answerPart = fullText.substring(start).trim()
+                        .replace(/KEY LEARNING POINT:[\s\S]*$/i, '').trim();
+                }
+
+                questionPart = questionPart.replace(/^QUESTION \d+:?\s*/i, '').trim();
+
+                text += `QUESTION ${num}\n${questionPart}\n\n`;
+                html.push(`<div class="study-question"><h3>Question ${num}</h3>`
+                    + `<div class="study-body">${escapeHtml(questionPart)}</div></div>`);
+
+                answers.push({ num: num, body: answerPart, article: mcqArticle(mcq) });
+            });
+
+            // --- 3. Answer key -----------------------------------------
+            text += `${rule}\n3. ANSWER KEY\n${rule}\n\n`;
+            html.push('<h2 class="study-page-break">3. Answer key</h2>');
+
+            answers.forEach(function (answer) {
+                const citation = studyCitation(answer.article);
+                const url = answer.article.url || '';
+
+                text += `QUESTION ${answer.num}\n`;
+                text += `${answer.body}\n`;
+                text += `Source: ${citation}\n`;
+                if (url) text += `${url}\n`;
+                text += '\n';
+
+                html.push(`<div class="study-answer"><h3>Question ${answer.num}</h3>`
+                    + `<div class="study-body">${escapeHtml(answer.body)}</div>`
+                    + `<p class="study-source">Source: ${escapeHtml(citation)}`
+                    + (url ? ` <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a>` : '')
+                    + '</p></div>');
+            });
+
+            // --- 4. Key learning points --------------------------------
+            const keyPoints = data.key_points || '';
+            if (keyPoints) {
+                text += `${rule}\n4. KEY LEARNING POINTS\n${rule}\n\n`;
+                text += keyPoints + '\n\n';
+
+                html.push('<h2 class="study-page-break">4. Key learning points</h2>');
+                html.push(`<div class="study-body">${linkifyCitations(escapeHtml(keyPoints), refCount)}</div>`);
+            }
+
+            // --- 5. Related articles -----------------------------------
+            const related = data.related_articles || [];
+            text += `${rule}\n5. RELATED ARTICLES TO CONSULT (PAST ${relatedYears} YEARS)\n${rule}\n\n`;
+            html.push(`<h2>5. Related articles to consult (past ${escapeHtml(relatedYears)} years)</h2>`);
+
+            if (related.length) {
+                let relatedHtml = '<ol class="study-reflist">';
+                related.forEach(function (article, index) {
+                    const citation = studyCitation(article);
+                    text += `${index + 1}. ${citation}\n`;
+                    if (article.url) text += `   ${article.url}\n`;
+                    text += '\n';
+
+                    relatedHtml += `<li>${escapeHtml(citation)}`
+                        + (article.url
+                            ? `<br><a href="${escapeHtml(article.url)}" target="_blank" rel="noopener">${escapeHtml(article.url)}</a>`
+                            : '')
+                        + '</li>';
+                });
+                relatedHtml += '</ol>';
+                html.push(relatedHtml);
+            } else {
+                text += 'No related articles found.\n\n';
+                html.push('<p>No related articles found.</p>');
+            }
+
+            // --- References --------------------------------------------
+            if (refCount) {
+                text += `${rule}\nREFERENCES — LITERATURE INDEXED IN ${label.toUpperCase()}\n${rule}\n\n`;
+                html.push(`<h2 class="study-page-break">References — literature indexed in ${escapeHtml(label)}</h2>`);
+                html.push('<p class="study-meta">Bracketed numbers in the summary and the learning points refer to this list.</p>');
+
+                let refHtml = '<ol class="study-reflist">';
+                refs.forEach(function (article, index) {
+                    const citation = studyCitation(article);
+                    text += `[${index + 1}] ${citation}\n`;
+                    if (article.url) text += `    ${article.url}\n`;
+                    text += '\n';
+
+                    refHtml += `<li id="sm-ref-${index + 1}">${escapeHtml(citation)}`
+                        + (article.url
+                            ? `<br><a href="${escapeHtml(article.url)}" target="_blank" rel="noopener">${escapeHtml(article.url)}</a>`
+                            : '')
+                        + '</li>';
+                });
+                refHtml += '</ol>';
+                html.push(refHtml);
+            }
+
+            // Articles the indexer had no abstract for. They can't be
+            // summarized or turned into questions, but they're still listed
+            // so nothing from the month goes unmentioned.
+            const noAbstract = data.articles_without_abstracts || [];
+            if (noAbstract.length) {
+                text += `${rule}\nADDITIONAL ARTICLES (NO ABSTRACT AVAILABLE, NOT SUMMARIZED)\n${rule}\n\n`;
+                html.push('<h2>Additional articles (no abstract available, not summarized)</h2>');
+
+                let extraHtml = '<ol class="study-reflist">';
+                noAbstract.forEach(function (article, index) {
+                    const citation = studyCitation(article);
+                    text += `${index + 1}. ${citation}\n`;
+                    if (article.url) text += `   ${article.url}\n`;
+                    text += '\n';
+
+                    extraHtml += `<li>${escapeHtml(citation)}`
+                        + (article.url
+                            ? `<br><a href="${escapeHtml(article.url)}" target="_blank" rel="noopener">${escapeHtml(article.url)}</a>`
+                            : '')
+                        + '</li>';
+                });
+                extraHtml += '</ol>';
+                html.push(extraHtml);
+            }
+
+            studyText = text;
+            studyBodyHtml = html.join('\n');
+        }
+
+        async function generateStudyMaterial() {
+            const btn = document.getElementById('study-btn');
+            const section = document.getElementById('study-section');
+            const preview = document.getElementById('study-preview');
+            const hint = document.getElementById('study-hint');
+            const month = document.getElementById('study-month').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0;"></div> Generating...';
+            hint.textContent = 'Fetching the literature and writing questions - this takes a few minutes.';
 
             try {
-                const response = await fetch('/api/monthly-update', {
+                const response = await fetch('/api/monthly-study-material', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ month: month })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    // Format the monthly update
-                    let updateText = 'MONTHLY LITERATURE UPDATE\n';
-                    updateText += 'Zoological Medicine Journals - Past Month\n';
-                    updateText += '=' .repeat(50) + '\n\n';
+                    buildStudyMaterial(data);
 
-                    let updateHtml = '<strong>MONTHLY LITERATURE UPDATE</strong>\n';
-                    updateHtml += 'Zoological Medicine Journals - Past Month\n';
-                    updateHtml += '=' .repeat(50) + '\n\n';
+                    section.style.display = 'block';
+                    preview.innerHTML = studyBodyHtml;
+                    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-                    // Summary by journal
-                    updateText += 'ARTICLES BY JOURNAL:\n';
-                    updateHtml += '<strong>ARTICLES BY JOURNAL:</strong>\n';
-                    for (const [journal, count] of Object.entries(data.journal_counts)) {
-                        updateText += `  ${journal}: ${count} articles\n`;
-                        updateHtml += `  ${journal}: ${count} articles\n`;
-                    }
-                    updateText += '\n';
-                    updateHtml += '\n';
-
-                    // Topics summary
-                    updateText += '=' .repeat(50) + '\n';
-                    updateText += 'LITERATURE SUMMARY BY TOPICS:\n';
-                    updateText += '=' .repeat(50) + '\n\n';
-                    updateText += data.topics_summary + '\n\n';
-
-                    updateHtml += '=' .repeat(50) + '\n';
-                    updateHtml += '<strong>LITERATURE SUMMARY BY TOPICS:</strong>\n';
-                    updateHtml += '=' .repeat(50) + '\n\n';
-                    updateHtml += data.topics_summary + '\n\n';
-
-                    // Key points
-                    updateText += '=' .repeat(50) + '\n';
-                    updateText += '12 KEY POINTS FOR ACZM EXAMINATION:\n';
-                    updateText += '=' .repeat(50) + '\n\n';
-                    updateText += data.key_points + '\n\n';
-
-                    updateHtml += '=' .repeat(50) + '\n';
-                    updateHtml += '<strong>12 KEY POINTS FOR ACZM EXAMINATION:</strong>\n';
-                    updateHtml += '=' .repeat(50) + '\n\n';
-                    updateHtml += data.key_points + '\n\n';
-
-                    // References list. Numbering matches the [N] citations
-                    // used in the topics summary and key points above.
-                    if (data.articles && data.articles.length > 0) {
-                        updateText += '=' .repeat(50) + '\n';
-                        updateText += 'REFERENCES:\n';
-                        updateText += '=' .repeat(50) + '\n\n';
-
-                        updateHtml += '=' .repeat(50) + '\n';
-                        updateHtml += '<strong>REFERENCES:</strong>\n';
-                        updateHtml += '=' .repeat(50) + '\n\n';
-
-                        data.articles.forEach((article, idx) => {
-                            // Get first author for citation
-                            const firstAuthor = article.authors ? article.authors.split(',')[0].trim() : 'Unknown';
-                            const authorEtAl = article.authors && article.authors.includes(',') ? ' et al.' : '';
-                            const refNum = idx + 1;
-
-                            updateText += `[${refNum}] ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. ${article.url}\n\n`;
-                            updateHtml += `[${refNum}] ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. <a href="${article.url}" target="_blank">[Link]</a>\n\n`;
-                        });
-                    }
-
-                    // Articles whose abstracts were not available from the
-                    // indexer (common for JHMS via CrossRef). They couldn't
-                    // be cited in the summary but are listed here so the
-                    // reader can still locate and consult them.
-                    if (data.articles_without_abstracts && data.articles_without_abstracts.length > 0) {
-                        updateText += '=' .repeat(50) + '\n';
-                        updateText += 'ADDITIONAL ARTICLES (no abstract available, not summarized):\n';
-                        updateText += '=' .repeat(50) + '\n\n';
-
-                        updateHtml += '=' .repeat(50) + '\n';
-                        updateHtml += '<strong>ADDITIONAL ARTICLES (no abstract available, not summarized):</strong>\n';
-                        updateHtml += '=' .repeat(50) + '\n\n';
-
-                        data.articles_without_abstracts.forEach((article, idx) => {
-                            const firstAuthor = article.authors ? article.authors.split(',')[0].trim() : 'Unknown';
-                            const authorEtAl = article.authors && article.authors.includes(',') ? ' et al.' : '';
-
-                            updateText += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. ${article.url}\n\n`;
-                            updateHtml += `${idx + 1}. ${firstAuthor}${authorEtAl} (${article.year}). ${article.title}. <a href="${article.url}" target="_blank">[Link]</a>\n\n`;
-                        });
-                    }
-
-                    formattedText = updateText;
-                    questionsSection.style.display = 'block';
-                    previewContent.innerHTML = updateHtml.replace(/\n/g, '<br>');
-                    copyBtn.disabled = false;
-
-                    // Cost is FYI for the operator only — deliberately kept
-                    // out of formattedText so it never lands in the copy.
-                    let hintText = 'Monthly update generated - use Copy to save';
+                    // Cost is for the operator only; deliberately kept out of
+                    // studyText so it never lands in the copy or the PDF.
+                    let hintText = `${(data.mcq_results || []).length} questions generated for ${data.period.label}`;
                     if (data.usage && typeof data.usage.cost_usd === 'number') {
-                        const cost = data.usage.cost_usd.toFixed(4);
-                        const inTok = data.usage.input_tokens || 0;
-                        const outTok = data.usage.output_tokens || 0;
-                        hintText += ` • Cost: $${cost} (${inTok} in / ${outTok} out tokens)`;
+                        hintText += ` • Cost: $${data.usage.cost_usd.toFixed(4)}`
+                            + ` (${data.usage.input_tokens || 0} in / ${data.usage.output_tokens || 0} out tokens)`;
                     }
                     hint.textContent = hintText;
-                    showAlert('Monthly literature update generated!', 'success');
+                    showAlert(`Monthly study material generated for ${data.period.label}`, 'success');
                 } else {
-                    showAlert(data.error || 'Failed to generate monthly update', 'error');
+                    hint.textContent = 'Generation failed - try again';
+                    showAlert(data.error || 'Failed to generate study material', 'error');
                 }
             } catch (error) {
+                hint.textContent = 'Generation failed - try again';
                 showAlert('Error: ' + error.message, 'error');
             } finally {
-                monthlyBtn.disabled = false;
-                monthlyBtn.innerHTML = `
+                btn.disabled = false;
+                btn.innerHTML = `
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                         <line x1="16" y1="2" x2="16" y2="6"/>
                         <line x1="8" y1="2" x2="8" y2="6"/>
                         <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
-                    Monthly Literature Update
+                    Generate Monthly Study Material
                 `;
             }
+        }
+
+        function copyStudyMaterial() {
+            if (!studyText) {
+                showAlert('Nothing to copy - generate the study material first', 'error');
+                return;
+            }
+
+            navigator.clipboard.writeText(studyText).then(function () {
+                showAlert('Study material copied to clipboard!', 'success');
+            }).catch(function (err) {
+                showAlert('Failed to copy: ' + err.message, 'error');
+            });
+        }
+
+        // Opens a print-styled copy of the document and triggers the browser's
+        // print dialog; "Save as PDF" produces a clean file with live links.
+        function exportStudyMaterialPDF() {
+            if (!studyBodyHtml) {
+                showAlert('Nothing to export - generate the study material first', 'error');
+                return;
+            }
+
+            const win = window.open('', '_blank');
+            if (!win) {
+                showAlert('Allow pop-ups for this site to export the PDF', 'error');
+                return;
+            }
+
+            const styles = `
+                @page { size: letter; margin: 18mm 16mm; }
+                * { box-sizing: border-box; }
+                body {
+                    font-family: Georgia, 'Times New Roman', serif;
+                    color: #1a202c;
+                    line-height: 1.55;
+                    font-size: 11.5pt;
+                    margin: 0;
+                    padding: 24px;
+                    max-width: 850px;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+                h1 {
+                    font-size: 19pt;
+                    color: #1a365d;
+                    border-bottom: 3px solid #2c5282;
+                    padding-bottom: 8px;
+                    margin: 0 0 18px;
+                }
+                h2 {
+                    font-size: 14pt;
+                    color: #2c5282;
+                    border-bottom: 1px solid #cbd5e0;
+                    padding-bottom: 4px;
+                    margin: 26px 0 12px;
+                }
+                h3 { font-size: 11.5pt; color: #2d3748; margin: 16px 0 6px; }
+                p { margin: 0 0 10px; }
+                a { color: #2b6cb0; }
+                ul, ol { margin: 0 0 12px; padding-left: 24px; }
+                li { margin-bottom: 8px; }
+                .study-greeting { font-weight: bold; margin-bottom: 6px; }
+                .study-disclaimer {
+                    background: #fffaf0;
+                    border-left: 4px solid #dd6b20;
+                    padding: 10px 14px;
+                    margin: 14px 0;
+                    font-size: 10.5pt;
+                }
+                .study-meta { font-size: 10pt; color: #4a5568; }
+                .study-body { white-space: pre-wrap; }
+                .study-question, .study-answer {
+                    border-left: 3px solid #e2e8f0;
+                    padding-left: 14px;
+                    margin-bottom: 16px;
+                    page-break-inside: avoid;
+                }
+                .study-source { font-size: 10pt; color: #4a5568; margin-top: 6px; }
+                .study-counts { list-style: none; padding-left: 0; }
+                .study-counts li { display: inline-block; margin-right: 18px; }
+                .study-reflist li { font-size: 10.5pt; }
+                .study-page-break { page-break-before: always; }
+                @media print { a { text-decoration: none; } }
+            `;
+
+            win.document.open();
+            win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8">'
+                + '<title>' + escapeHtml(studyDocTitle) + '</title>'
+                + '<style>' + styles + '</style></head><body>'
+                + studyBodyHtml
+                + '</body></html>');
+            win.document.close();
+            win.focus();
+
+            // Give the new document a moment to lay out before printing.
+            setTimeout(function () { win.print(); }, 500);
         }
 
         function showAlert(message, type) {
