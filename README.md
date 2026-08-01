@@ -83,6 +83,10 @@ EMAIL_RECIPIENTS = [
 
 - `GET /api/articles` - Fetch recent JZWM articles from PubMed
 - `POST /api/generate-mcq` - Generate MCQ questions (JSON body: `{num_questions: 5}`)
+- `POST /api/monthly-study-material` - Generate the monthly resident package for one
+  calendar month (JSON body: `{month: "2026-07"}`, defaults to the last complete
+  month): literature summary, 10 MCQs, 10 key learning points, and further reading
+  from the past 3 years
 - `POST /api/send-email` - Generate and send MCQ email (JSON body: `{recipient_email: "...", num_questions: 5}`)
 - `GET /api/recipients` - Get list of email recipients
 
